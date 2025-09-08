@@ -155,7 +155,7 @@ const Dashboard = () => {
       <div className="min-h-screen w-full flex bg-background">
         <Sidebar activeView={activeView} onViewChange={setActiveView} />
         
-        <main className="flex-1 overflow-auto">
+        <main className="flex-1 overflow-hidden">
           <div className="p-6">
             {renderMainContent()}
           </div>
