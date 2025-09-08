@@ -37,8 +37,8 @@ const Index = () => {
         <div className="relative z-10 text-center text-foreground max-w-4xl mx-auto px-6">
           <div className="bg-background/20 backdrop-blur-md rounded-lg p-8 border border-primary/20">
             <h1 className="text-5xl md:text-7xl font-bold mb-6 leading-tight">
-              <span className="text-primary">PROTECT</span>
-              <span className="block text-foreground">EARTH</span>
+              <span className="text-white">PROTECT</span>
+              <span className="block text-primary">EARTH</span>
               <span className="block text-sm md:text-lg font-normal text-white mt-2">
                 ENVIRONMENTAL IMPACT MONITORING
               </span>
@@ -60,7 +60,7 @@ const Index = () => {
               <Button 
                 size="lg" 
                 variant="outline" 
-                className="border-primary/30 text-primary hover:bg-primary/10 hover:text-white px-8 py-4 text-lg backdrop-blur-sm font-semibold rounded-lg"
+                className="border-primary/30 text-primary hover:bg-primary/20 hover:text-primary hover:border-primary px-8 py-4 text-lg backdrop-blur-sm font-semibold rounded-lg transition-smooth"
               >
                 <Search className="mr-2 h-5 w-5" />
                 Learn More
