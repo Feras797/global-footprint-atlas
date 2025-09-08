@@ -7,7 +7,7 @@ import { RegionAnalyzer } from "@/components/RegionAnalyzer";
 import { CompanyReport } from "@/components/CompanyReport";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { TrendingUp, TrendingDown, Globe, Leaf } from "lucide-react";
+import { MetricGrid } from "@/components/dashboard";
 
 interface CompanyLocation {
   id: string;
@@ -53,7 +53,24 @@ const Dashboard = () => {
       type: 'agriculture',
       impactScore: 88,
       country: 'Brazil'
-    }
+    },
+    { id: '4', name: 'BlueSteel Mining', position: [-0.9, 0.4, -0.6], type: 'mining', impactScore: 65, country: 'Canada' },
+    { id: '5', name: 'Solaris Power', position: [0.2, 1.0, -0.3], type: 'energy', impactScore: 38, country: 'Australia' },
+    { id: '6', name: 'AgriFoods Ltd', position: [-1.0, -0.2, 0.5], type: 'agriculture', impactScore: 54, country: 'India' },
+    { id: '7', name: 'EuroManufacture', position: [0.6, 0.1, -0.9], type: 'manufacturing', impactScore: 47, country: 'France' },
+    { id: '8', name: 'ShinTech Fabrication', position: [-0.3, -0.9, 0.8], type: 'manufacturing', impactScore: 59, country: 'Japan' },
+    { id: '9', name: 'Nordic Minerals', position: [0.7, -0.2, 0.9], type: 'mining', impactScore: 33, country: 'Norway' },
+    { id: '10', name: 'Desert Oil Fields', position: [0.9, 0.5, -0.4], type: 'energy', impactScore: 81, country: 'Saudi Arabia' },
+    { id: '11', name: 'RiverValley Farms', position: [-0.4, 0.7, 0.6], type: 'agriculture', impactScore: 42, country: 'Argentina' },
+    { id: '12', name: 'MetroWorks Assembly', position: [0.5, 0.9, -0.2], type: 'manufacturing', impactScore: 36, country: 'UK' },
+    { id: '13', name: 'Siberia Metals', position: [-0.8, -0.5, 0.4], type: 'mining', impactScore: 76, country: 'Russia' },
+    { id: '14', name: 'Coastal Wind Co', position: [0.1, -1.1, 0.6], type: 'energy', impactScore: 29, country: 'Spain' },
+    { id: '15', name: 'Mediterranean Agro', position: [-0.6, 0.2, -1.0], type: 'agriculture', impactScore: 51, country: 'Italy' },
+    { id: '16', name: 'TransPacific Fabricators', position: [1.0, -0.1, 0.2], type: 'manufacturing', impactScore: 63, country: 'China' },
+    { id: '17', name: 'Andes Mining Group', position: [-0.7, 0.8, -0.1], type: 'mining', impactScore: 57, country: 'Peru' },
+    { id: '18', name: 'Equatorial BioFarms', position: [0.2, -0.8, 1.0], type: 'agriculture', impactScore: 46, country: 'Indonesia' },
+    { id: '19', name: 'Gulf Petro Energy', position: [0.4, 0.6, 0.9], type: 'energy', impactScore: 84, country: 'UAE' },
+    { id: '20', name: 'Savanna Growers', position: [-0.2, 0.9, -0.7], type: 'agriculture', impactScore: 40, country: 'South Africa' }
   ];
 
   const renderMainContent = () => {
@@ -62,47 +79,10 @@ const Dashboard = () => {
         return (
           <div className="space-y-6">
             {/* Overview Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              <Card className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-2xl font-bold text-foreground">{companyLocations.length}</div>
-                    <div className="text-sm text-muted-foreground">Active Companies</div>
-                  </div>
-                  <Globe className="h-8 w-8 text-primary" />
-                </div>
-              </Card>
-              
-              <Card className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-2xl font-bold text-foreground">67%</div>
-                    <div className="text-sm text-muted-foreground">Avg Impact Score</div>
-                  </div>
-                  <TrendingUp className="h-8 w-8 text-secondary" />
-                </div>
-              </Card>
-              
-              <Card className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-2xl font-bold text-foreground">-12%</div>
-                    <div className="text-sm text-muted-foreground">Impact Reduction</div>
-                  </div>
-                  <TrendingDown className="h-8 w-8 text-green-500" />
-                </div>
-              </Card>
-              
-              <Card className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-2xl font-bold text-foreground">23</div>
-                    <div className="text-sm text-muted-foreground">Countries</div>
-                  </div>
-                  <Leaf className="h-8 w-8 text-accent" />
-                </div>
-              </Card>
-            </div>
+            <MetricGrid 
+              companies={companyLocations}
+              loading={false}
+            />
 
             {/* Main Content Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -137,31 +117,14 @@ const Dashboard = () => {
         return (
           <div className="space-y-6">
             <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-bold">Company Management</h2>
+              <h2 className="text-2xl font-bold">Company Directory</h2>
               <Badge variant="secondary">{companyLocations.length} companies</Badge>
             </div>
-            
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card className="p-6">
-                <h3 className="text-lg font-semibold mb-4">Company Directory</h3>
-                <CompanyList 
-                  companies={companyLocations}
-                  onCompanySelect={setSelectedCompany}
-                  showAll={true}
-                />
-              </Card>
-              
-              <Card className="p-6">
-                <h3 className="text-lg font-semibold mb-4">Impact Visualization</h3>
-                <div className="h-96">
-                  <DashboardMap 
-                    companies={companyLocations}
-                    onCompanySelect={setSelectedCompany}
-                    filters={filters}
-                  />
-                </div>
-              </Card>
-            </div>
+            <CompanyList 
+              companies={companyLocations}
+              onCompanySelect={setSelectedCompany}
+              showAll={true}
+            />
           </div>
         );
 

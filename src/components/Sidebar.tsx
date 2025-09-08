@@ -49,12 +49,6 @@ const menuItems = [
     description: "Analyze regions"
   },
   {
-    title: "Reports",
-    icon: FileText,
-    view: 'reports' as DashboardView,
-    description: "View reports"
-  },
-  {
     title: "Settings",
     icon: Settings,
     view: 'settings' as DashboardView,
