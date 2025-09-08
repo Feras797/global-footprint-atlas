@@ -40,5 +40,3 @@ export function getSimilarCompanies (base: Company, count = 3): Company[] {
     .sort((a, b) => Math.abs(a.impactScore - base.impactScore) - Math.abs(b.impactScore - base.impactScore))
     .slice(0, count)
 }
-
-
