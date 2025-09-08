@@ -60,19 +60,19 @@ export default {
         },
       },
       backgroundImage: {
-        'gradient-earth': 'var(--gradient-earth)',
-        'gradient-sky': 'var(--gradient-sky)', 
-        'gradient-ocean': 'var(--gradient-ocean)',
-        'gradient-forest': 'var(--gradient-forest)',
+        'gradient-tactical': 'var(--gradient-tactical)',
+        'gradient-orange': 'var(--gradient-orange)', 
+        'gradient-command': 'var(--gradient-command)',
+        'gradient-stealth': 'var(--gradient-stealth)',
       },
       boxShadow: {
-        'glow': 'var(--shadow-glow)',
-        'earth': 'var(--shadow-earth)',
-        'elevated': 'var(--shadow-elevated)',
+        'tactical': 'var(--shadow-tactical)',
+        'command': 'var(--shadow-command)',
+        'stealth': 'var(--shadow-stealth)',
       },
       transitionProperty: {
-        'smooth': 'var(--transition-smooth)',
-        'fast': 'var(--transition-fast)',
+        'tactical': 'var(--transition-tactical)',
+        'command': 'var(--transition-command)',
       },
       borderRadius: {
         lg: "var(--radius)",
