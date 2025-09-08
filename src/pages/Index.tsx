@@ -26,8 +26,8 @@ const Index = () => {
         
         {/* Globe Container */}
         <div className="absolute inset-0 flex items-center justify-center">
-          <div className="relative">
-            <Globe className="w-[80vw] h-[80vw] min-w-[800px] min-h-[800px] max-w-[1200px] max-h-[1200px]" />
+          <div className="relative flex items-center justify-center w-full h-full">
+            <Globe className="w-[120vw] h-[120vw] min-w-[1200px] min-h-[1200px]" />
             {/* Blue Glow */}
             <div className="absolute inset-0 rounded-full bg-gradient-blue opacity-20 blur-3xl"></div>
           </div>
