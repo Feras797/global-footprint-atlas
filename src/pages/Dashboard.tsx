@@ -3,11 +3,20 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { Sidebar } from "@/components/Sidebar";
 import { CompanyList } from "@/components/CompanyList";
 import { DashboardMap } from "@/components/DashboardMap";
+import { CesiumGlobe } from "@/components/CesiumGlobe";
 import { RegionAnalyzer } from "@/components/RegionAnalyzer";
 import { CompanyReport } from "@/components/CompanyReport";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { MetricGrid } from "@/components/dashboard";
+import { 
+  EnhancedCompanyLocation, 
+  MockCompanyData,
+  convertMockDataToEnhanced,
+  convertEnhancedToLegacy 
+} from "@/types/company";
+import { CompanyData, GlobeEntity } from "@/types/globe";
+import mockDataJson from "@/data/mockdata.json";
 
 interface CompanyLocation {
   id: string;
@@ -23,11 +32,22 @@ export type DashboardView = 'overview' | 'companies' | 'regions' | 'reports' | '
 const Dashboard = () => {
   const [activeView, setActiveView] = useState<DashboardView>('overview');
   const [selectedCompany, setSelectedCompany] = useState<CompanyLocation | null>(null);
+  const [selectedEnhancedCompany, setSelectedEnhancedCompany] = useState<EnhancedCompanyLocation | null>(null);
+  const [selectedGlobeEntity, setSelectedGlobeEntity] = useState<GlobeEntity | null>(null);
   const [filters, setFilters] = useState({
     type: 'all',
     impactRange: [0, 100] as [number, number],
     timeRange: '2024'
   });
+
+  // Load data from mockdata.JSON file
+  const mockCompanies: MockCompanyData[] = mockDataJson as MockCompanyData[];
+  
+  // Convert mock data to enhanced format (flattens all mines into individual entries)
+  const enhancedCompanies: EnhancedCompanyLocation[] = convertMockDataToEnhanced(mockCompanies);
+  
+  // Convert to CompanyData format for globe visualization
+  const globeCompanies: CompanyData[] = mockCompanies as CompanyData[];
 
   const companyLocations: CompanyLocation[] = [
     {
@@ -90,13 +110,14 @@ const Dashboard = () => {
               <Card className="lg:col-span-2 p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-semibold">Global Impact Map</h3>
-                  <Badge variant="secondary">{companyLocations.length} facilities</Badge>
+                  <Badge variant="secondary">{enhancedCompanies.length} facilities</Badge>
                 </div>
                 <div className="h-96">
-                  <DashboardMap 
-                    companies={companyLocations}
-                    onCompanySelect={setSelectedCompany}
-                    filters={filters}
+                  <CesiumGlobe 
+                    companies={globeCompanies}
+                    onEntitySelect={setSelectedGlobeEntity}
+                    showControls={true}
+                    className="w-full h-full"
                   />
                 </div>
               </Card>
@@ -166,6 +187,14 @@ const Dashboard = () => {
           <CompanyReport
             company={selectedCompany}
             onClose={() => setSelectedCompany(null)}
+          />
+        )}
+
+        {/* Enhanced Company Report Modal */}
+        {selectedEnhancedCompany && (
+          <CompanyReport
+            company={convertEnhancedToLegacy(selectedEnhancedCompany)}
+            onClose={() => setSelectedEnhancedCompany(null)}
           />
         )}
       </div>
