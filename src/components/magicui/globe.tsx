@@ -72,7 +72,7 @@ export default function Globe({
   };
 
   const onRender = (state: Record<string, any>) => {
-    if (!pointerInteracting.current) phi += 0.005;
+    if (!pointerInteracting.current) phi += 0.002; // Slower rotation
     state.phi = phi;
     state.width = width * 2;
     state.height = width * 2;
@@ -106,7 +106,7 @@ export default function Globe({
   return (
     <div
       className={cn(
-        "absolute inset-0 mx-auto aspect-[1/1] w-full max-w-[600px]",
+        "absolute inset-0 mx-auto aspect-[1/1] w-full max-w-[800px]",
         className,
       )}
     >

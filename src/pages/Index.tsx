@@ -27,7 +27,7 @@ const Index = () => {
         {/* Globe Container */}
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="relative">
-            <Globe className="w-[600px] h-[600px]" />
+            <Globe className="w-[800px] h-[800px]" />
             {/* Blue Glow */}
             <div className="absolute inset-0 rounded-full bg-gradient-blue opacity-20 blur-3xl"></div>
           </div>
@@ -39,7 +39,7 @@ const Index = () => {
             <h1 className="text-5xl md:text-7xl font-bold mb-6 leading-tight">
               <span className="text-primary">PROTECT</span>
               <span className="block text-foreground">EARTH</span>
-              <span className="block text-sm md:text-lg font-normal text-muted-foreground mt-2">
+              <span className="block text-sm md:text-lg font-normal text-white mt-2">
                 ENVIRONMENTAL IMPACT MONITORING
               </span>
             </h1>
@@ -51,16 +51,16 @@ const Index = () => {
               <Link to="/dashboard">
                 <Button 
                   size="lg" 
-                  className="bg-primary hover:bg-primary-glow text-primary-foreground px-8 py-4 text-lg shadow-glow transition-smooth hover:scale-105 font-semibold rounded-lg"
+                  className="bg-primary hover:bg-primary-glow text-white px-8 py-4 text-lg shadow-glow transition-smooth hover:scale-105 font-semibold rounded-lg"
                 >
-                  <BarChart3 className="mr-2 h-5 w-5" />
+                  <BarChart3 className="mr-2 h-5 w-5 text-white" />
                   Start Analysis
                 </Button>
               </Link>
               <Button 
                 size="lg" 
                 variant="outline" 
-                className="border-primary/30 text-primary hover:bg-primary/10 px-8 py-4 text-lg backdrop-blur-sm font-semibold rounded-lg"
+                className="border-primary/30 text-primary hover:bg-primary/10 hover:text-white px-8 py-4 text-lg backdrop-blur-sm font-semibold rounded-lg"
               >
                 <Search className="mr-2 h-5 w-5" />
                 Learn More
