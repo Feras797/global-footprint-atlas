@@ -66,7 +66,7 @@ export const CompanyList: React.FC<CompanyListProps> = ({
               const title = type.charAt(0).toUpperCase() + type.slice(1);
               return (
                 <AccordionItem key={type} value={type} className="px-0">
-                  <AccordionTrigger className="py-2 hover:no-underline transition-all duration-300 ease-out hover:bg-gradient-to-r hover:from-accent/50 hover:to-accent/20 hover:shadow-sm hover:scale-[1.01] rounded-lg px-3 -mx-3 hover:border-l-2 hover:border-primary/20">
+                  <AccordionTrigger className="py-2 hover:no-underline hover:border-b hover:border-primary/30 transition-all duration-200">
                     <div className="flex items-center justify-between w-full">
                       <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">{title}</h4>
                       <div className="text-xs text-muted-foreground mr-2 md:mr-3">{group.length} companies</div>
