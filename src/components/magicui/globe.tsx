@@ -17,7 +17,7 @@ const GLOBE_CONFIG = {
   mapSamples: 16000,
   mapBrightness: 1.2,
   baseColor: [1, 1, 1] as [number, number, number],
-  markerColor: [251 / 255, 100 / 255, 21 / 255] as [number, number, number], // Tactical orange
+  markerColor: [58 / 255, 159 / 255, 255 / 255] as [number, number, number], // Shiny dark blue
   glowColor: [1, 1, 1] as [number, number, number],
   markers: [
     { location: [14.5995, 120.9842] as [number, number], size: 0.03 },

@@ -2,23 +2,23 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Navigation } from "@/components/Navigation";
 import Globe from "@/components/magicui/globe";
-import { Shield, Target, TrendingUp, Crosshair, BarChart3, Radar, Users, Zap } from "lucide-react";
+import { BarChart3, TrendingUp, Globe2, Users, Zap, MapPin, FileText, Search } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const Index = () => {
   return (
-    <div className="min-h-screen bg-gradient-stealth text-foreground">
+    <div className="min-h-screen bg-gradient-subtle text-foreground">
       <Navigation />
       
       {/* Hero Section with Globe */}
-      <section className="relative h-screen flex items-center justify-center overflow-hidden bg-gradient-tactical">
-        {/* Tactical Grid Background */}
+      <section className="relative h-screen flex items-center justify-center overflow-hidden bg-gradient-primary">
+        {/* Subtle Grid Background */}
         <div 
           className="absolute inset-0 opacity-5"
           style={{
             backgroundImage: `
-              linear-gradient(rgba(251, 100, 21, 0.1) 1px, transparent 1px),
-              linear-gradient(90deg, rgba(251, 100, 21, 0.1) 1px, transparent 1px)
+              linear-gradient(rgba(58, 159, 255, 0.1) 1px, transparent 1px),
+              linear-gradient(90deg, rgba(58, 159, 255, 0.1) 1px, transparent 1px)
             `,
             backgroundSize: '50px 50px'
           }}
@@ -28,127 +28,127 @@ const Index = () => {
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="relative">
             <Globe className="w-[600px] h-[600px]" />
-            {/* Tactical Orange Glow */}
-            <div className="absolute inset-0 rounded-full bg-gradient-orange opacity-20 blur-3xl"></div>
+            {/* Blue Glow */}
+            <div className="absolute inset-0 rounded-full bg-gradient-blue opacity-20 blur-3xl"></div>
           </div>
         </div>
         
         {/* Content Overlay */}
         <div className="relative z-10 text-center text-foreground max-w-4xl mx-auto px-6">
           <div className="bg-background/20 backdrop-blur-md rounded-lg p-8 border border-primary/20">
-            <Target className="w-16 h-16 mx-auto mb-6 text-primary animate-pulse" />
+            <Globe2 className="w-16 h-16 mx-auto mb-6 text-primary animate-pulse" />
             <h1 className="text-5xl md:text-7xl font-bold mb-6 leading-tight">
               <span className="text-primary">PROTECT</span>
               <span className="block text-foreground">EARTH</span>
               <span className="block text-sm md:text-lg font-normal text-muted-foreground mt-2">
-                TACTICAL ENVIRONMENTAL INTELLIGENCE
+                ENVIRONMENTAL IMPACT MONITORING
               </span>
             </h1>
             <p className="text-xl md:text-2xl mb-8 opacity-90 text-muted-foreground">
-              Advanced surveillance and analysis of corporate environmental impact. 
-              Deploy data-driven strategies to defend our planet.
+              Monitor and analyze how companies impact the environment worldwide. 
+              Make data-driven decisions for a sustainable future.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link to="/dashboard">
                 <Button 
                   size="lg" 
-                  className="bg-primary hover:bg-primary-glow text-primary-foreground px-8 py-4 text-lg shadow-tactical transition-all duration-300 hover:scale-105 font-semibold"
+                  className="bg-primary hover:bg-primary-glow text-primary-foreground px-8 py-4 text-lg shadow-glow transition-smooth hover:scale-105 font-semibold rounded-lg"
                 >
-                  <Radar className="mr-2 h-5 w-5" />
-                  DEPLOY ANALYSIS
+                  <BarChart3 className="mr-2 h-5 w-5" />
+                  Start Analysis
                 </Button>
               </Link>
               <Button 
                 size="lg" 
                 variant="outline" 
-                className="border-primary/30 text-primary hover:bg-primary/10 px-8 py-4 text-lg backdrop-blur-sm font-semibold"
+                className="border-primary/30 text-primary hover:bg-primary/10 px-8 py-4 text-lg backdrop-blur-sm font-semibold rounded-lg"
               >
-                <Crosshair className="mr-2 h-5 w-5" />
-                TACTICAL BRIEF
+                <Search className="mr-2 h-5 w-5" />
+                Learn More
               </Button>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Mission Capabilities */}
+      {/* Platform Capabilities */}
       <section className="py-20 bg-background">
         <div className="max-w-6xl mx-auto px-6">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold mb-4">MISSION CAPABILITIES</h2>
+            <h2 className="text-4xl font-bold mb-4">Platform Capabilities</h2>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Advanced tactical systems for environmental intelligence and corporate impact assessment
+              Advanced environmental monitoring and analysis tools for corporate sustainability assessment
             </p>
           </div>
           
           <div className="grid md:grid-cols-3 gap-8">
-            <Card className="p-8 text-center hover:shadow-tactical transition-all duration-300 hover:-translate-y-1 bg-card border-primary/20">
-              <Radar className="w-12 h-12 mx-auto mb-4 text-primary" />
-              <h3 className="text-xl font-semibold mb-3">GLOBAL SURVEILLANCE</h3>
+            <Card className="p-8 text-center hover:shadow-glow transition-spring hover:-translate-y-1 bg-card border-primary/20 rounded-xl">
+              <Globe2 className="w-12 h-12 mx-auto mb-4 text-primary" />
+              <h3 className="text-xl font-semibold mb-3">Global Monitoring</h3>
               <p className="text-muted-foreground">
-                Real-time monitoring of environmental impact zones with advanced satellite intelligence
+                Real-time tracking of environmental impact zones with comprehensive satellite data analysis
               </p>
             </Card>
             
-            <Card className="p-8 text-center hover:shadow-tactical transition-all duration-300 hover:-translate-y-1 bg-card border-primary/20">
+            <Card className="p-8 text-center hover:shadow-glow transition-spring hover:-translate-y-1 bg-card border-primary/20 rounded-xl">
               <TrendingUp className="w-12 h-12 mx-auto mb-4 text-primary" />
-              <h3 className="text-xl font-semibold mb-3">THREAT ANALYSIS</h3>
+              <h3 className="text-xl font-semibold mb-3">Impact Analysis</h3>
               <p className="text-muted-foreground">
-                Track environmental threats over time with predictive modeling and trend analysis
+                Track environmental changes over time with predictive modeling and trend analysis
               </p>
             </Card>
             
-            <Card className="p-8 text-center hover:shadow-tactical transition-all duration-300 hover:-translate-y-1 bg-card border-primary/20">
-              <Shield className="w-12 h-12 mx-auto mb-4 text-primary" />
-              <h3 className="text-xl font-semibold mb-3">DEFENSE REPORTS</h3>
+            <Card className="p-8 text-center hover:shadow-glow transition-spring hover:-translate-y-1 bg-card border-primary/20 rounded-xl">
+              <FileText className="w-12 h-12 mx-auto mb-4 text-primary" />
+              <h3 className="text-xl font-semibold mb-3">Detailed Reports</h3>
               <p className="text-muted-foreground">
-                Generate classified tactical reports with detailed environmental impact assessments
+                Generate comprehensive reports with detailed environmental impact assessments
               </p>
             </Card>
           </div>
         </div>
       </section>
 
-      {/* Intel Statistics */}
-      <section className="py-20 bg-gradient-tactical border-y border-primary/20">
+      {/* Data Insights */}
+      <section className="py-20 bg-gradient-primary border-y border-primary/20">
         <div className="max-w-6xl mx-auto px-6">
           <div className="grid md:grid-cols-4 gap-8 text-center">
-            <div className="bg-background/10 rounded-lg p-6 backdrop-blur-sm">
+            <div className="bg-background/10 rounded-xl p-6 backdrop-blur-sm">
               <div className="text-4xl font-bold text-primary mb-2">2,500+</div>
-              <div className="text-muted-foreground font-medium">TARGETS ANALYZED</div>
+              <div className="text-muted-foreground font-medium">Companies Monitored</div>
             </div>
-            <div className="bg-background/10 rounded-lg p-6 backdrop-blur-sm">
+            <div className="bg-background/10 rounded-xl p-6 backdrop-blur-sm">
               <div className="text-4xl font-bold text-primary mb-2">150+</div>
-              <div className="text-muted-foreground font-medium">REGIONS SECURED</div>
+              <div className="text-muted-foreground font-medium">Countries Covered</div>
             </div>
-            <div className="bg-background/10 rounded-lg p-6 backdrop-blur-sm">
+            <div className="bg-background/10 rounded-xl p-6 backdrop-blur-sm">
               <div className="text-4xl font-bold text-primary mb-2">98%</div>
-              <div className="text-muted-foreground font-medium">INTEL ACCURACY</div>
+              <div className="text-muted-foreground font-medium">Data Accuracy</div>
             </div>
-            <div className="bg-background/10 rounded-lg p-6 backdrop-blur-sm">
+            <div className="bg-background/10 rounded-xl p-6 backdrop-blur-sm">
               <div className="text-4xl font-bold text-primary mb-2">24/7</div>
-              <div className="text-muted-foreground font-medium">ACTIVE MONITORING</div>
+              <div className="text-muted-foreground font-medium">Live Monitoring</div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Command Center Access */}
-      <section className="py-20 bg-gradient-command">
+      {/* Platform Access */}
+      <section className="py-20 bg-gradient-surface">
         <div className="max-w-4xl mx-auto text-center px-6">
           <Zap className="w-16 h-16 mx-auto mb-6 text-primary" />
-          <h2 className="text-4xl font-bold mb-6">ACCESS COMMAND CENTER</h2>
+          <h2 className="text-4xl font-bold mb-6">Access the Platform</h2>
           <p className="text-xl mb-8 text-muted-foreground">
-            Join environmental defense operatives using ProtectEarth tactical systems 
-            to conduct critical planetary protection missions.
+            Join environmental researchers and organizations using ProtectEarth 
+            to monitor corporate environmental impact worldwide.
           </p>
           <Link to="/dashboard">
             <Button 
               size="lg" 
-              className="bg-primary hover:bg-primary-glow text-primary-foreground px-8 py-4 text-lg shadow-tactical transition-all duration-300 hover:scale-105 font-semibold"
+              className="bg-primary hover:bg-primary-glow text-primary-foreground px-8 py-4 text-lg shadow-glow transition-spring hover:scale-105 font-semibold rounded-lg"
             >
               <BarChart3 className="mr-2 h-5 w-5" />
-              ENTER COMMAND CENTER
+              Open Dashboard
             </Button>
           </Link>
         </div>
@@ -159,13 +159,12 @@ const Index = () => {
         <div className="max-w-6xl mx-auto px-6">
           <div className="flex flex-col md:flex-row items-center justify-between">
             <div className="flex items-center space-x-2 mb-4 md:mb-0">
-              <Shield className="h-6 w-6 text-primary" />
+              <Globe2 className="h-6 w-6 text-primary" />
               <span className="text-lg font-bold">PROTECTEARTH</span>
-              <span className="text-xs text-muted-foreground ml-2">CLASSIFIED</span>
             </div>
             <p className="text-sm text-muted-foreground text-center md:text-right">
-              TACTICAL ENVIRONMENTAL INTELLIGENCE SYSTEM<br/>
-              <span className="text-primary">DEFENDING EARTH THROUGH DATA</span>
+              Environmental Impact Monitoring Platform<br/>
+              <span className="text-primary">Protecting Earth Through Data</span>
             </p>
           </div>
         </div>

@@ -60,19 +60,19 @@ export default {
         },
       },
       backgroundImage: {
-        'gradient-tactical': 'var(--gradient-tactical)',
-        'gradient-orange': 'var(--gradient-orange)', 
-        'gradient-command': 'var(--gradient-command)',
-        'gradient-stealth': 'var(--gradient-stealth)',
+        'gradient-primary': 'var(--gradient-primary)',
+        'gradient-blue': 'var(--gradient-blue)', 
+        'gradient-surface': 'var(--gradient-surface)',
+        'gradient-subtle': 'var(--gradient-subtle)',
       },
       boxShadow: {
-        'tactical': 'var(--shadow-tactical)',
-        'command': 'var(--shadow-command)',
-        'stealth': 'var(--shadow-stealth)',
+        'glow': 'var(--shadow-glow)',
+        'elevated': 'var(--shadow-elevated)',
+        'surface': 'var(--shadow-surface)',
       },
       transitionProperty: {
-        'tactical': 'var(--transition-tactical)',
-        'command': 'var(--transition-command)',
+        'smooth': 'var(--transition-smooth)',
+        'spring': 'var(--transition-spring)',
       },
       borderRadius: {
         lg: "var(--radius)",

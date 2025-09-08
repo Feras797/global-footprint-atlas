@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { 
-  Shield, 
+  Globe2, 
   BarChart3, 
   Building2, 
   MapPin, 
@@ -67,10 +67,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onViewChange }) =>
     <SidebarComponent className="border-r border-border">
       <SidebarHeader className="p-6 border-b border-border">
         <div className="flex items-center space-x-2">
-          <Shield className="h-8 w-8 text-primary" />
+          <Globe2 className="h-8 w-8 text-primary" />
           <div>
             <div className="text-lg font-bold text-foreground">ProtectEarth</div>
-            <div className="text-xs text-muted-foreground">Environmental Analysis</div>
+            <div className="text-xs text-muted-foreground">Environmental Monitoring</div>
           </div>
         </div>
       </SidebarHeader>
