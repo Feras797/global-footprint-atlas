@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Globe, Menu, Search, User } from "lucide-react";
+import { Shield, Menu, Search, User } from "lucide-react";
 import { useState } from "react";
 
 export const Navigation = () => {
@@ -11,8 +11,8 @@ export const Navigation = () => {
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <div className="flex items-center space-x-2">
-            <Globe className="h-8 w-8 text-primary" />
-            <span className="text-xl font-bold text-foreground">EarthImpact</span>
+            <Shield className="h-8 w-8 text-primary" />
+            <span className="text-xl font-bold text-foreground">ProtectEarth</span>
           </div>
 
           {/* Desktop Navigation */}

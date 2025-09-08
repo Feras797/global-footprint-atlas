@@ -14,7 +14,7 @@ interface CompanyLocation {
   country: string;
 }
 
-interface InteractiveGlobeProps {
+interface DashboardMapProps {
   companies: CompanyLocation[];
   onCompanySelect: (company: CompanyLocation) => void;
   filters: {
@@ -26,11 +26,10 @@ interface InteractiveGlobeProps {
 
 const Globe = ({ companies, onCompanySelect }: { companies: CompanyLocation[], onCompanySelect: (company: CompanyLocation) => void }) => {
   const meshRef = useRef<THREE.Mesh>(null);
-  const { camera } = useThree();
 
   useFrame(() => {
     if (meshRef.current) {
-      meshRef.current.rotation.y += 0.002;
+      meshRef.current.rotation.y += 0.001; // Slower rotation for dashboard
     }
   });
 
@@ -42,67 +41,67 @@ const Globe = ({ companies, onCompanySelect }: { companies: CompanyLocation[], o
 
   return (
     <group>
-      {/* Earth Globe */}
-      <Sphere ref={meshRef} args={[2, 64, 64]}>
+      {/* Earth Globe - smaller and more subtle for dashboard */}
+      <Sphere ref={meshRef} args={[1.5, 32, 32]}>
         <meshPhongMaterial
           color="#1e40af"
           transparent
-          opacity={0.8}
-          shininess={100}
+          opacity={0.7}
+          shininess={80}
           specular="#87ceeb"
         />
       </Sphere>
 
       {/* Atmosphere */}
-      <Sphere args={[2.05, 64, 64]}>
+      <Sphere args={[1.55, 32, 32]}>
         <meshBasicMaterial
           color="#87ceeb"
           transparent
-          opacity={0.1}
+          opacity={0.08}
           side={THREE.BackSide}
         />
       </Sphere>
 
-      {/* Company Markers */}
+      {/* Company Markers - smaller for dashboard */}
       {companies.map((company) => (
         <group key={company.id}>
           <mesh
             position={[
-              company.position[0] * 2.1,
-              company.position[1] * 2.1,
-              company.position[2] * 2.1
+              company.position[0] * 1.6,
+              company.position[1] * 1.6,
+              company.position[2] * 1.6
             ]}
             onClick={() => onCompanySelect(company)}
           >
-            <sphereGeometry args={[0.03, 8, 8]} />
+            <sphereGeometry args={[0.02, 6, 6]} />
             <meshBasicMaterial color={getMarkerColor(company.type, company.impactScore)} />
           </mesh>
 
-          {/* Floating Info Card */}
+          {/* Simplified hover info - only show on hover */}
           <Html
             position={[
-              company.position[0] * 2.3,
-              company.position[1] * 2.3,
-              company.position[2] * 2.3
+              company.position[0] * 1.8,
+              company.position[1] * 1.8,
+              company.position[2] * 1.8
             ]}
-            distanceFactor={8}
+            distanceFactor={6}
             occlude
           >
-            <Card 
-              className="p-3 bg-background/90 backdrop-blur-sm border shadow-earth cursor-pointer hover:shadow-glow transition-all duration-300"
-              onClick={() => onCompanySelect(company)}
+            <div 
+              className="opacity-0 hover:opacity-100 transition-opacity duration-300 pointer-events-none"
             >
-              <div className="text-sm">
-                <div className="font-semibold text-foreground">{company.name}</div>
-                <div className="text-muted-foreground">{company.country}</div>
-                <Badge 
-                  variant={company.impactScore > 70 ? "destructive" : company.impactScore > 40 ? "secondary" : "default"}
-                  className="mt-1"
-                >
-                  Impact: {company.impactScore}%
-                </Badge>
-              </div>
-            </Card>
+              <Card className="p-2 bg-background/95 backdrop-blur-sm border shadow-sm">
+                <div className="text-xs">
+                  <div className="font-medium text-foreground">{company.name}</div>
+                  <Badge 
+                    variant={company.impactScore > 70 ? "destructive" : company.impactScore > 40 ? "secondary" : "default"}
+                    className="mt-1 text-xs"
+                  >
+                    {company.impactScore}%
+                  </Badge>
+                </div>
+              </Card>
+            </div>
           </Html>
         </group>
       ))}
@@ -110,7 +109,7 @@ const Globe = ({ companies, onCompanySelect }: { companies: CompanyLocation[], o
   );
 };
 
-export const InteractiveGlobe: React.FC<InteractiveGlobeProps> = ({
+export const DashboardMap: React.FC<DashboardMapProps> = ({
   companies,
   onCompanySelect,
   filters
@@ -120,12 +119,11 @@ export const InteractiveGlobe: React.FC<InteractiveGlobeProps> = ({
   useEffect(() => {
     let filtered = companies;
 
-    // Filter by type
+    // Apply same filtering logic as the original InteractiveGlobe
     if (filters.type !== 'all') {
       filtered = filtered.filter(company => company.type === filters.type);
     }
 
-    // Filter by impact range
     filtered = filtered.filter(company => 
       company.impactScore >= filters.impactRange[0] && 
       company.impactScore <= filters.impactRange[1]
@@ -135,14 +133,14 @@ export const InteractiveGlobe: React.FC<InteractiveGlobeProps> = ({
   }, [companies, filters]);
 
   return (
-    <div className="h-full w-full relative">
+    <div className="h-full w-full relative rounded-lg overflow-hidden">
       <Canvas
-        camera={{ position: [0, 0, 5], fov: 60 }}
+        camera={{ position: [0, 0, 4], fov: 50 }}
         style={{ background: 'linear-gradient(180deg, #0f172a 0%, #1e293b 100%)' }}
       >
-        <ambientLight intensity={0.3} />
-        <pointLight position={[10, 10, 10]} intensity={1} />
-        <pointLight position={[-10, -10, -10]} intensity={0.5} />
+        <ambientLight intensity={0.4} />
+        <pointLight position={[5, 5, 5]} intensity={0.8} />
+        <pointLight position={[-5, -5, -5]} intensity={0.4} />
         
         <Globe companies={filteredCompanies} onCompanySelect={onCompanySelect} />
         
@@ -150,22 +148,18 @@ export const InteractiveGlobe: React.FC<InteractiveGlobeProps> = ({
           enableZoom={true}
           enablePan={false}
           enableRotate={true}
-          zoomSpeed={0.6}
-          rotateSpeed={0.5}
-          minDistance={3}
-          maxDistance={10}
+          zoomSpeed={0.4}
+          rotateSpeed={0.3}
+          minDistance={2.5}
+          maxDistance={6}
         />
       </Canvas>
 
-      {/* Globe Stats Overlay */}
-      <div className="absolute bottom-6 left-6 z-10">
-        <Card className="p-4 bg-background/90 backdrop-blur-sm">
-          <div className="space-y-2">
-            <div className="text-sm text-muted-foreground">Active Facilities</div>
-            <div className="text-2xl font-bold text-foreground">{filteredCompanies.length}</div>
-            <div className="text-sm text-muted-foreground">
-              Avg Impact: {Math.round(filteredCompanies.reduce((sum, c) => sum + c.impactScore, 0) / filteredCompanies.length || 0)}%
-            </div>
+      {/* Compact Stats Overlay for Dashboard */}
+      <div className="absolute bottom-2 right-2 z-10">
+        <Card className="p-2 bg-background/90 backdrop-blur-sm">
+          <div className="text-xs text-muted-foreground">
+            {filteredCompanies.length} facilities
           </div>
         </Card>
       </div>
