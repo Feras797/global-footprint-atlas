@@ -43,9 +43,9 @@ const Index = () => {
                 ENVIRONMENTAL IMPACT MONITORING
               </span>
             </h1>
-            <p className="text-xl md:text-2xl mb-8 opacity-90 text-muted-foreground">
+            <p className="text-xl md:text-2xl mb-8 text-white">
               Monitor and analyze how companies impact the environment worldwide. 
-              Make data-driven decisions for a sustainable future.
+              Make data-driven decisions for a <span className="text-primary font-semibold">sustainable future</span>.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link to="/dashboard">
