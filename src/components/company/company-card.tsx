@@ -1,5 +1,6 @@
 import React from 'react'
 import { Card } from '@/components/ui/card'
+import { useNavigate } from 'react-router-dom'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
@@ -100,10 +101,12 @@ export const CompanyCard = ({
   showActions = true,
   className
 }: CompanyCardProps) => {
+  const navigate = useNavigate()
   const trend = generateMockTrend()
 
   const handleCardClick = () => {
     onSelect(company)
+    navigate(`/company/${company.id}`)
   }
 
   if (variant === 'compact') {

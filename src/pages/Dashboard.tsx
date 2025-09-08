@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { companies as companiesData } from '@/lib/companies'
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { Sidebar } from "@/components/Sidebar";
 import { CompanyList } from "@/components/CompanyList";
@@ -49,49 +50,16 @@ const Dashboard = () => {
   // Convert to CompanyData format for globe visualization
   const globeCompanies: CompanyData[] = mockCompanies as CompanyData[];
 
-  const companyLocations: CompanyLocation[] = [
-    {
-      id: '1',
-      name: 'TechCorp Manufacturing',
-      position: [1.2, 0.8, 0.9],
-      type: 'manufacturing',
-      impactScore: 72,
-      country: 'USA'
-    },
-    {
-      id: '2', 
-      name: 'GreenEnergy Solutions',
-      position: [-0.5, 0.3, 1.1],
-      type: 'energy',
-      impactScore: 45,
-      country: 'Germany'
-    },
-    {
-      id: '3',
-      name: 'AgroGiant Facilities',
-      position: [0.8, -0.6, 0.7],
-      type: 'agriculture',
-      impactScore: 88,
-      country: 'Brazil'
-    },
-    { id: '4', name: 'BlueSteel Mining', position: [-0.9, 0.4, -0.6], type: 'mining', impactScore: 65, country: 'Canada' },
-    { id: '5', name: 'Solaris Power', position: [0.2, 1.0, -0.3], type: 'energy', impactScore: 38, country: 'Australia' },
-    { id: '6', name: 'AgriFoods Ltd', position: [-1.0, -0.2, 0.5], type: 'agriculture', impactScore: 54, country: 'India' },
-    { id: '7', name: 'EuroManufacture', position: [0.6, 0.1, -0.9], type: 'manufacturing', impactScore: 47, country: 'France' },
-    { id: '8', name: 'ShinTech Fabrication', position: [-0.3, -0.9, 0.8], type: 'manufacturing', impactScore: 59, country: 'Japan' },
-    { id: '9', name: 'Nordic Minerals', position: [0.7, -0.2, 0.9], type: 'mining', impactScore: 33, country: 'Norway' },
-    { id: '10', name: 'Desert Oil Fields', position: [0.9, 0.5, -0.4], type: 'energy', impactScore: 81, country: 'Saudi Arabia' },
-    { id: '11', name: 'RiverValley Farms', position: [-0.4, 0.7, 0.6], type: 'agriculture', impactScore: 42, country: 'Argentina' },
-    { id: '12', name: 'MetroWorks Assembly', position: [0.5, 0.9, -0.2], type: 'manufacturing', impactScore: 36, country: 'UK' },
-    { id: '13', name: 'Siberia Metals', position: [-0.8, -0.5, 0.4], type: 'mining', impactScore: 76, country: 'Russia' },
-    { id: '14', name: 'Coastal Wind Co', position: [0.1, -1.1, 0.6], type: 'energy', impactScore: 29, country: 'Spain' },
-    { id: '15', name: 'Mediterranean Agro', position: [-0.6, 0.2, -1.0], type: 'agriculture', impactScore: 51, country: 'Italy' },
-    { id: '16', name: 'TransPacific Fabricators', position: [1.0, -0.1, 0.2], type: 'manufacturing', impactScore: 63, country: 'China' },
-    { id: '17', name: 'Andes Mining Group', position: [-0.7, 0.8, -0.1], type: 'mining', impactScore: 57, country: 'Peru' },
-    { id: '18', name: 'Equatorial BioFarms', position: [0.2, -0.8, 1.0], type: 'agriculture', impactScore: 46, country: 'Indonesia' },
-    { id: '19', name: 'Gulf Petro Energy', position: [0.4, 0.6, 0.9], type: 'energy', impactScore: 84, country: 'UAE' },
-    { id: '20', name: 'Savanna Growers', position: [-0.2, 0.9, -0.7], type: 'agriculture', impactScore: 40, country: 'South Africa' }
-  ];
+  // Use shared company list for list and metrics
+  const companyLocations: CompanyLocation[] = companiesData
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const view = params.get('view') as DashboardView | null
+    if (view && ['overview','companies','regions','reports','settings'].includes(view)) {
+      setActiveView(view)
+    }
+  }, [])
 
   const renderMainContent = () => {
     switch (activeView) {
