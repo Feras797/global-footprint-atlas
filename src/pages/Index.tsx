@@ -36,7 +36,6 @@ const Index = () => {
         {/* Content Overlay */}
         <div className="relative z-10 text-center text-foreground max-w-4xl mx-auto px-6">
           <div className="bg-background/20 backdrop-blur-md rounded-lg p-8 border border-primary/20">
-            <Globe2 className="w-16 h-16 mx-auto mb-6 text-primary animate-pulse" />
             <h1 className="text-5xl md:text-7xl font-bold mb-6 leading-tight">
               <span className="text-primary">PROTECT</span>
               <span className="block text-foreground">EARTH</span>
@@ -159,7 +158,6 @@ const Index = () => {
         <div className="max-w-6xl mx-auto px-6">
           <div className="flex flex-col md:flex-row items-center justify-between">
             <div className="flex items-center space-x-2 mb-4 md:mb-0">
-              <Globe2 className="h-6 w-6 text-primary" />
               <span className="text-lg font-bold">PROTECTEARTH</span>
             </div>
             <p className="text-sm text-muted-foreground text-center md:text-right">

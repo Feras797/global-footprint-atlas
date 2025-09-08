@@ -67,7 +67,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onViewChange }) =>
     <SidebarComponent className="border-r border-border">
       <SidebarHeader className="p-6 border-b border-border">
         <div className="flex items-center space-x-2">
-          <Globe2 className="h-8 w-8 text-primary" />
           <div>
             <div className="text-lg font-bold text-foreground">ProtectEarth</div>
             <div className="text-xs text-muted-foreground">Environmental Monitoring</div>
