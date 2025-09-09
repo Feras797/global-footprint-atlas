@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { MapLibreRegionSelector } from "@/components/MapLibreRegionSelector";
 import { 
   MapPin, 
   Plus, 
@@ -14,7 +15,8 @@ import {
   Edit, 
   Download,
   Globe,
-  BarChart3
+  BarChart3,
+  Map
 } from "lucide-react";
 
 interface Region {
@@ -53,6 +55,7 @@ export const RegionAnalyzer = () => {
   ]);
 
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showMapSelector, setShowMapSelector] = useState(false);
   const [newRegion, setNewRegion] = useState({
     name: '',
     lat: '',
@@ -61,6 +64,21 @@ export const RegionAnalyzer = () => {
     type: 'forest' as Region['type'],
     description: ''
   });
+
+  const handleMapRegionSelect = (selectedRegion: {
+    center: { lat: number; lng: number };
+    bounds: { north: number; south: number; east: number; west: number };
+    area: number;
+  }) => {
+    if (selectedRegion.area > 0) {
+      setNewRegion({
+        ...newRegion,
+        lat: selectedRegion.center.lat.toFixed(6),
+        lng: selectedRegion.center.lng.toFixed(6),
+        area: Math.round(selectedRegion.area).toString()
+      });
+    }
+  };
 
   const handleCreateRegion = () => {
     if (!newRegion.name || !newRegion.lat || !newRegion.lng) return;
@@ -88,6 +106,7 @@ export const RegionAnalyzer = () => {
       description: ''
     });
     setShowCreateForm(false);
+    setShowMapSelector(false);
   };
 
   const handleDeleteRegion = (id: string) => {
@@ -129,78 +148,141 @@ export const RegionAnalyzer = () => {
         <Card className="p-6 border-primary/20 bg-primary/5">
           <h3 className="text-lg font-semibold mb-4">Create New Analysis Region</h3>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-4">
+          {!showMapSelector ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="region-name">Region Name</Label>
+                  <Input
+                    id="region-name"
+                    placeholder="e.g., Pacific Coast Study Area"
+                    value={newRegion.name}
+                    onChange={(e) => setNewRegion({ ...newRegion, name: e.target.value })}
+                  />
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="latitude">Latitude</Label>
+                    <Input
+                      id="latitude"
+                      placeholder="e.g., 40.7128"
+                      value={newRegion.lat}
+                      onChange={(e) => setNewRegion({ ...newRegion, lat: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="longitude">Longitude</Label>
+                    <Input
+                      id="longitude"
+                      placeholder="e.g., -74.0060"
+                      value={newRegion.lng}
+                      onChange={(e) => setNewRegion({ ...newRegion, lng: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="area">Area (km²)</Label>
+                    <Input
+                      id="area"
+                      placeholder="e.g., 1500"
+                      value={newRegion.area}
+                      onChange={(e) => setNewRegion({ ...newRegion, area: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="type">Region Type</Label>
+                    <Select value={newRegion.type} onValueChange={(value) => setNewRegion({ ...newRegion, type: value as Region['type'] })}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="forest">Forest</SelectItem>
+                        <SelectItem value="agricultural">Agricultural</SelectItem>
+                        <SelectItem value="industrial">Industrial</SelectItem>
+                        <SelectItem value="urban">Urban</SelectItem>
+                        <SelectItem value="coastal">Coastal</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                
+                <div className="pt-4">
+                  <Button 
+                    type="button"
+                    variant="outline" 
+                    onClick={() => setShowMapSelector(true)}
+                    className="w-full"
+                  >
+                    <Map className="h-4 w-4 mr-2" />
+                    Select Region on Map
+                  </Button>
+                </div>
+              </div>
+
               <div>
-                <Label htmlFor="region-name">Region Name</Label>
-                <Input
-                  id="region-name"
-                  placeholder="e.g., Pacific Coast Study Area"
-                  value={newRegion.name}
-                  onChange={(e) => setNewRegion({ ...newRegion, name: e.target.value })}
+                <Label htmlFor="description">Description</Label>
+                <Textarea
+                  id="description"
+                  placeholder="Describe the purpose and focus of this analysis region..."
+                  className="h-32"
+                  value={newRegion.description}
+                  onChange={(e) => setNewRegion({ ...newRegion, description: e.target.value })}
                 />
               </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h4 className="text-md font-medium">Select Region on Map</h4>
+                <Button 
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowMapSelector(false)}
+                >
+                  Back to Form
+                </Button>
+              </div>
               
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="latitude">Latitude</Label>
-                  <Input
-                    id="latitude"
-                    placeholder="e.g., 40.7128"
-                    value={newRegion.lat}
-                    onChange={(e) => setNewRegion({ ...newRegion, lat: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="longitude">Longitude</Label>
-                  <Input
-                    id="longitude"
-                    placeholder="e.g., -74.0060"
-                    value={newRegion.lng}
-                    onChange={(e) => setNewRegion({ ...newRegion, lng: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="area">Area (km²)</Label>
-                  <Input
-                    id="area"
-                    placeholder="e.g., 1500"
-                    value={newRegion.area}
-                    onChange={(e) => setNewRegion({ ...newRegion, area: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="type">Region Type</Label>
-                  <Select value={newRegion.type} onValueChange={(value) => setNewRegion({ ...newRegion, type: value as Region['type'] })}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="forest">Forest</SelectItem>
-                      <SelectItem value="agricultural">Agricultural</SelectItem>
-                      <SelectItem value="industrial">Industrial</SelectItem>
-                      <SelectItem value="urban">Urban</SelectItem>
-                      <SelectItem value="coastal">Coastal</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                placeholder="Describe the purpose and focus of this analysis region..."
-                className="h-32"
-                value={newRegion.description}
-                onChange={(e) => setNewRegion({ ...newRegion, description: e.target.value })}
+              <p className="text-sm text-muted-foreground">
+                Click and drag on the map to draw a rectangle over your region of interest. The coordinates and area will be automatically calculated.
+              </p>
+              
+              <MapLibreRegionSelector 
+                height="500px"
+                onRegionSelect={handleMapRegionSelect}
               />
+              
+              {newRegion.lat && newRegion.lng && (
+                <div className="p-4 bg-muted rounded-lg">
+                  <h5 className="font-medium mb-2">Selected Region</h5>
+                  <div className="grid grid-cols-3 gap-4 text-sm">
+                    <div>
+                      <span className="text-muted-foreground">Center: </span>
+                      <span>{parseFloat(newRegion.lat).toFixed(4)}, {parseFloat(newRegion.lng).toFixed(4)}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Area: </span>
+                      <span>{newRegion.area} km²</span>
+                    </div>
+                    <div>
+                      <Button 
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowMapSelector(false)}
+                      >
+                        Continue
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
-          </div>
+          )}
 
           <div className="flex justify-end space-x-3 mt-6">
             <Button variant="outline" onClick={() => setShowCreateForm(false)}>

@@ -118,14 +118,7 @@ const Dashboard = () => {
         );
 
       case 'regions':
-        return (
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-bold">Region Analysis</h2>
-            </div>
-            <RegionAnalyzer />
-          </div>
-        );
+        return <RegionAnalyzer />;
 
       default:
         return (
