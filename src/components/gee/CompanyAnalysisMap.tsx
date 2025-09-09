@@ -9,8 +9,8 @@ import { AlertCircle, Loader2, MapPin } from 'lucide-react';
 // Google Maps API key
 const GOOGLE_MAPS_API_KEY = 'AIzaSyDxCaV_ArUKahmWNSsO2OVni3dUoPSqfPI';
 
-// Local mock API endpoint
-const ANALYSIS_API_ENDPOINT = 'http://localhost:3002/analyze-area';
+// Real similarity analysis API
+const SIMILARITY_API_BASE = 'https://similar1-370308594166.europe-west1.run.app/similarity/top3';
 
 interface CompanyLocation {
   name: string;
@@ -26,80 +26,115 @@ interface AnalysisMapProps {
 }
 
 interface SimilarArea {
-  coordinates: [number, number, number, number]; // [tlx, tly, brx, bry] - converted from polygon
+  bbox: [number, number, number, number]; // [minLng, minLat, maxLng, maxLat] 
   similarity: number;
   rank: number;
-  name: string;
+  index: number;
+  position: string;
+  features: {
+    ndvi_mean: number;
+    ndvi_std: number;
+    elevation_mean: number;
+    elevation_std: number;
+    slope_mean: number;
+    slope_std: number;
+    ndwi_mean: number;
+    ndbi_mean: number;
+    landcover_diversity: number;
+  };
 }
 
 // Real API response structure
-interface ApiSimilarArea {
-  geometry: {
-    rm: string; // "Polygon"
-    ja: number[][][]; // [[[lng, lat], [lng, lat], ...]]
-    xg?: any; // Optional extra fields from API
-    args?: any;
-    ol?: any;
-    la?: any;
-    da?: any;
+interface RealApiResponse {
+  status: string;
+  timestamp: string;
+  config: {
+    reference_bbox: [number, number, number, number];
+    start_date: string;
+    end_date: string;
+    search_radius_km: number;
+    sampling_resolution_m: number;
+    max_candidates: number;
+    similarity_threshold: number;
+    weights: {
+      ndvi: number;
+      elevation: number;
+      slope: number;
+      landcover: number;
+    };
   };
-  similarity: number;
-  position: number;
-  rank: number;
-  name: string;
-}
-
-interface AnalysisResponse {
-  // The API returns an array of similar areas, not the old top_3 format
-  data?: ApiSimilarArea[]; // For real API response
-  // Keep old format for fallback/mock
-  top_3?: [
-    [number, number, number, number],
-    [number, number, number, number], 
-    [number, number, number, number]
-  ];
-  similarity?: [number, number, number];
+  reference: {
+    bbox: [number, number, number, number];
+  };
+  candidates_generated: number;
+  top_matches: {
+    rank: number;
+    index: number;
+    position: string;
+    similarity: number;
+    bbox: [number, number, number, number];
+    features: {
+      ndvi_mean: number;
+      ndvi_std: number;
+      elevation_mean: number;
+      elevation_std: number;
+      slope_mean: number;
+      slope_std: number;
+      ndwi_mean: number;
+      ndbi_mean: number;
+      landcover_diversity: number;
+    };
+  }[];
 }
 
 /**
- * Convert GeoJSON polygon coordinates to bounding box [tlx, tly, brx, bry]
+ * Transform coordinates from [tlx, tly, brx, bry] to API format and build URL
  */
-const convertPolygonToBoundingBox = (polygon: number[][]): [number, number, number, number] => {
-  // Extract all longitude and latitude values from the polygon
-  const lngs = polygon.map(point => point[0]);
-  const lats = polygon.map(point => point[1]);
+const buildSimilarityApiUrl = (coordinates: [number, number, number, number]): string => {
+  const [tlx, tly, brx, bry] = coordinates;
   
-  // Find min/max values
-  const minLng = Math.min(...lngs);
-  const maxLng = Math.max(...lngs);
-  const minLat = Math.min(...lats);
-  const maxLat = Math.max(...lats);
+  // Convert to minLng, minLat, maxLng, maxLat format
+  const minLng = Math.min(tlx, brx);
+  const maxLng = Math.max(tlx, brx);
+  const minLat = Math.min(tly, bry);
+  const maxLat = Math.max(tly, bry);
   
-  // Return as [left, top, right, bottom] - Google Maps format
-  return [minLng, maxLat, maxLng, minLat];
+  const params = new URLSearchParams({
+    reference_bbox: `${minLng},${minLat},${maxLng},${maxLat}`,
+    start_date: '2022-01-01',
+    end_date: '2023-12-31',
+    search_radius_km: '400',
+    sampling_resolution_m: '25000',
+    max_candidates: '20',
+    similarity_threshold: '0.5',
+    'weights.ndvi': '0.4',
+    'weights.elevation': '0.2',
+    'weights.slope': '0.2',
+    'weights.landcover': '0.2'
+  });
+  
+  return `${SIMILARITY_API_BASE}?${params.toString()}`;
 };
 
 /**
  * Parse real API response and convert to internal SimilarArea format
  */
-const parseApiResponse = (apiAreas: ApiSimilarArea[]): SimilarArea[] => {
-  return apiAreas.map(area => {
-    // Extract the first (and usually only) polygon from the geometry
-    const polygon = area.geometry.ja[0];
-    const coordinates = convertPolygonToBoundingBox(polygon);
-    
-    console.log(`🔄 Converting ${area.name}:`, {
-      originalPolygon: polygon,
-      convertedBoundingBox: coordinates,
-      similarity: area.similarity,
-      rank: area.rank
+const parseRealApiResponse = (apiResponse: RealApiResponse): SimilarArea[] => {
+  return apiResponse.top_matches.map(match => {
+    console.log(`🔄 Converting Rank ${match.rank}:`, {
+      position: match.position,
+      bbox: match.bbox,
+      similarity: match.similarity,
+      features: match.features
     });
     
     return {
-      coordinates,
-      similarity: area.similarity,
-      rank: area.rank,
-      name: area.name
+      bbox: match.bbox,
+      similarity: match.similarity,
+      rank: match.rank,
+      index: match.index,
+      position: match.position,
+      features: match.features
     };
   });
 };
@@ -123,6 +158,10 @@ export const CompanyAnalysisMap: React.FC<AnalysisMapProps> = ({
   const [totalApiRequests, setTotalApiRequests] = useState(0);
   const [similarAreas, setSimilarAreas] = useState<SimilarArea[]>([]);
   const [isAnalysisEnabled, setIsAnalysisEnabled] = useState(false);
+  const [selectedArea, setSelectedArea] = useState<{
+    type: 'company' | 'similar';
+    data: any;
+  } | null>(null);
 
   /**
    * Initialize Google Maps
@@ -174,8 +213,10 @@ export const CompanyAnalysisMap: React.FC<AnalysisMapProps> = ({
   const createCompanySquares = async () => {
     if (!mapInstance.current || locations.length === 0) return;
 
+    console.log(`🎯 Starting analysis for ${locations.length} company locations`);
     setTotalApiRequests(locations.length);
     setApiRequestsCompleted(0);
+    setIsAnalysisEnabled(false); // Reset analysis button
     
     const newRectangles: google.maps.Rectangle[] = [];
 
@@ -206,7 +247,11 @@ export const CompanyAnalysisMap: React.FC<AnalysisMapProps> = ({
 
       // Add click handler with location info
       rectangle.addListener('click', () => {
-        console.log('Clicked company location:', location.name);
+        console.log('🔴 Clicked company location:', location.name);
+        setSelectedArea({
+          type: 'company',
+          data: location
+        });
       });
 
       // Add hover effects
@@ -226,19 +271,17 @@ export const CompanyAnalysisMap: React.FC<AnalysisMapProps> = ({
   };
 
   /**
-   * Fetch similar areas from backend API
+   * Fetch similar areas from real similarity API
    */
   const fetchSimilarAreas = async (coordinates: [number, number, number, number]) => {
     try {
+      const apiUrl = buildSimilarityApiUrl(coordinates);
       console.log('📡 Requesting similar areas for coordinates:', coordinates);
-      console.log('🔗 Using endpoint:', ANALYSIS_API_ENDPOINT);
+      console.log('🔗 Using real API URL:', apiUrl);
       
-      const response = await fetch(ANALYSIS_API_ENDPOINT, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ coordinates }),
+      const response = await fetch(apiUrl, {
+        method: 'GET',
+        // No additional headers needed for GET request
       });
 
       console.log('📡 Response status:', response.status, response.statusText);
@@ -249,43 +292,53 @@ export const CompanyAnalysisMap: React.FC<AnalysisMapProps> = ({
 
       const data = await response.json();
       console.log('📥 Raw API response:', data);
+      console.log('📊 Response status:', data.status);
+      console.log('📊 Top matches count:', data.top_matches ? data.top_matches.length : 'undefined');
       
       let newSimilarAreas: SimilarArea[] = [];
       
-      // Check if it's the new API format (array of areas) or old format
-      if (Array.isArray(data)) {
-        // New API format: direct array of ApiSimilarArea objects
-        console.log('🔄 Processing new API format with GeoJSON polygons');
-        newSimilarAreas = parseApiResponse(data as ApiSimilarArea[]);
-      } else if (data.data && Array.isArray(data.data)) {
-        // API response wrapped in data property
-        console.log('🔄 Processing wrapped API response');
-        newSimilarAreas = parseApiResponse(data.data as ApiSimilarArea[]);
-      } else if (data.top_3 && data.similarity) {
-        // Old API format fallback
-        console.log('🔄 Processing old API format');
-        newSimilarAreas = data.top_3.map((coords: [number, number, number, number], index: number) => ({
-          coordinates: coords,
-          similarity: data.similarity[index],
-          rank: index + 1,
-          name: `Area ${index + 1}`
-        }));
+      // Check if it's the real API format
+      if (data.status === 'success' && data.top_matches && Array.isArray(data.top_matches)) {
+        console.log('🔄 Processing real API format with top_matches');
+        try {
+          newSimilarAreas = parseRealApiResponse(data as RealApiResponse);
+          console.log('✅ Successfully parsed', newSimilarAreas.length, 'similar areas');
+        } catch (parseError) {
+          console.error('❌ Error during parsing:', parseError);
+          throw parseError;
+        }
       } else {
-        throw new Error('Unrecognized API response format');
+        console.error('❌ Invalid response format:', { status: data.status, hasTopMatches: !!data.top_matches, isArray: Array.isArray(data.top_matches) });
+        throw new Error(`Unrecognized API response format. Expected 'status: success' and 'top_matches' array.`);
       }
 
       console.log('✅ Parsed similar areas:', newSimilarAreas);
       console.log('🟢 API call successful - received', newSimilarAreas.length, 'green areas');
-      setSimilarAreas(prev => [...prev, ...newSimilarAreas]);
+      setSimilarAreas(prev => {
+        const updated = [...prev, ...newSimilarAreas];
+        console.log('📈 Total similar areas now:', updated.length);
+        return updated;
+      });
       
     } catch (error) {
-      console.error('❌ API request failed:', error);
-      console.log('❌ No green boxes will be shown - server must be running');
-      // Don't create mock data - only show green boxes from real API response
+      console.error('❌ Real API request failed:', error);
+      
+      // Enhanced error logging for different types of failures
+      if (error instanceof TypeError) {
+        console.error('🚫 CORS Error: The similarity API may not allow cross-origin requests from this domain');
+        console.error('🔧 Potential solution: API needs to add CORS headers for http://localhost:8080');
+      } else if (error instanceof Error) {
+        console.error('📄 Error details:', error.message);
+      }
+      
+      console.log('❌ No green boxes will be shown - real API unavailable');
+      // No fallback to mock data - real API only
     } finally {
       setApiRequestsCompleted(prev => {
         const newCount = prev + 1;
+        console.log(`🔢 API requests: ${newCount}/${totalApiRequests} completed`);
         if (newCount === totalApiRequests) {
+          console.log('✅ All API requests completed - enabling analysis button');
           setIsAnalysisEnabled(true);
         }
         return newCount;
@@ -307,14 +360,14 @@ export const CompanyAnalysisMap: React.FC<AnalysisMapProps> = ({
     const greenRectangles: google.maps.Rectangle[] = [];
 
     similarAreas.forEach((area, index) => {
-      const [tlx, tly, brx, bry] = area.coordinates;
+      const [minLng, minLat, maxLng, maxLat] = area.bbox;
       
       const rectangle = new google.maps.Rectangle({
         bounds: {
-          north: tly,
-          south: bry,
-          east: brx,
-          west: tlx
+          north: maxLat,
+          south: minLat,
+          east: maxLng,
+          west: minLng
         },
         fillColor: '#22c55e',
         fillOpacity: 0.3,
@@ -329,7 +382,12 @@ export const CompanyAnalysisMap: React.FC<AnalysisMapProps> = ({
 
       // Add click handler with enhanced info
       rectangle.addListener('click', () => {
-        console.log(`🟢 Clicked similar area: ${area.name} (Rank ${area.rank}), similarity: ${(area.similarity * 100).toFixed(1)}%`);
+        console.log(`🟢 Clicked similar area: Position ${area.position} (Rank ${area.rank}), similarity: ${(area.similarity * 100).toFixed(1)}%`);
+        console.log('📊 Environmental features:', area.features);
+        setSelectedArea({
+          type: 'similar',
+          data: area
+        });
       });
 
       // Add hover effects
@@ -373,16 +431,16 @@ export const CompanyAnalysisMap: React.FC<AnalysisMapProps> = ({
       if (onAnalysisComplete && !hasNotifiedCompletion) {
         const redAreasData = locations.map((location, index) => ({
           ...location,
-          environmentalData: generateMockEnvironmentalData()
+          environmentalData: null // Company areas don't have environmental features yet
         }));
         
         const greenAreasData = similarAreas.map((area, index) => ({
-          name: area.name || `Similar Area ${index + 1}`,
-          coordinates: area.coordinates,
+          name: `Area ${area.position}`,
+          coordinates: area.bbox,
           location: 'Environmentally Similar Region',
           similarity: area.similarity,
           rank: area.rank,
-          environmentalData: generateMockEnvironmentalData()
+          environmentalData: area.features
         }));
         
         onAnalysisComplete(redAreasData, greenAreasData);
@@ -406,10 +464,12 @@ export const CompanyAnalysisMap: React.FC<AnalysisMapProps> = ({
     })));
     
     console.log('🟢 Similar areas:', similarAreas.map(area => ({
-      name: area.name,
+      position: area.position,
       rank: area.rank,
       similarity: `${(area.similarity * 100).toFixed(1)}%`,
-      coordinates: area.coordinates
+      bbox: area.bbox,
+      ndvi: area.features.ndvi_mean.toFixed(3),
+      elevation: `${area.features.elevation_mean.toFixed(1)}m`
     })));
     
     // This will trigger the detailed analysis API call later
@@ -417,99 +477,188 @@ export const CompanyAnalysisMap: React.FC<AnalysisMapProps> = ({
     alert(`Analysis ready!\n\nCompany Areas: ${locations.length}\nSimilar Areas: ${similarAreas.length}\n\nReady to proceed with detailed environmental analysis.`);
   };
 
-  // Helper function to generate mock environmental data
-  const generateMockEnvironmentalData = () => {
-    return {
-      ndvi: Math.random() * 0.6 + 0.2, // 0.2 to 0.8
-      ndwi: Math.random() * 0.6 - 0.3, // -0.3 to 0.3
-      ndbi: Math.random() * 0.4 - 0.2, // -0.2 to 0.2
-      elevation: Math.random() * 800 + 50, // 50 to 850m
-      slope: Math.random() * 25, // 0 to 25 degrees
-      temperature: Math.random() * 15 + 10, // 10 to 25°C
-      precipitation: Math.random() * 1200 + 300, // 300 to 1500mm
-      humidity: Math.random() * 40 + 40, // 40 to 80%
-      landCover: {
-        forest: Math.random() * 70,
-        urban: Math.random() * 40,
-        agriculture: Math.random() * 60,
-        water: Math.random() * 15,
-        barren: Math.random() * 20
-      }
-    };
-  };
 
   return (
     <div className={`space-y-4 ${className}`}>
-      {/* Map Container with Fixed Height */}
-      <Card className="p-0 overflow-hidden">
-        <div className="p-4 border-b border-border">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="font-semibold">Environmental Analysis Map</h3>
-              <p className="text-sm text-muted-foreground">
-                {companyName} operational areas and similar regions
-              </p>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Badge variant="outline" className="text-xs">
-                <MapPin className="h-3 w-3 mr-1" />
-                {locations.length} location{locations.length !== 1 ? 's' : ''}
-              </Badge>
-              {apiRequestsCompleted > 0 && (
-                <Badge variant="secondary" className="text-xs">
-                  {apiRequestsCompleted}/{totalApiRequests} areas analyzed
-                </Badge>
-              )}
-            </div>
-          </div>
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="font-semibold">Environmental Analysis Map</h3>
+          <p className="text-sm text-muted-foreground">
+            {companyName} operational areas and similar regions
+          </p>
         </div>
-        
-        {/* Fixed Height Map Container */}
-        <div className="relative">
-          <div ref={mapContainer} className="h-[500px] w-full" />
+        <div className="flex items-center space-x-2">
+          <Badge variant="outline" className="text-xs">
+            <MapPin className="h-3 w-3 mr-1" />
+            {locations.length} location{locations.length !== 1 ? 's' : ''}
+          </Badge>
+          {apiRequestsCompleted > 0 && (
+            <Badge variant="secondary" className="text-xs">
+              {apiRequestsCompleted}/{totalApiRequests} areas analyzed
+            </Badge>
+          )}
+        </div>
+      </div>
+
+      {/* Main Content: Map (75%) + Info Panel (25%) */}
+      <div className="flex gap-4 h-[600px]">
+        {/* Map Container - 75% width */}
+        <Card className="flex-[3] p-0 overflow-hidden">
+          <div className="relative h-full">
+            <div ref={mapContainer} className="h-full w-full" />
           
-          {/* Loading Overlay */}
-          {isLoading && (
-            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-              <Card className="p-4">
-                <div className="flex items-center space-x-3">
-                  <Loader2 className="h-5 w-5 animate-spin text-primary" />
-                  <div>
-                    <p className="font-medium">Loading Map...</p>
-                    <p className="text-xs text-muted-foreground">
-                      Initializing satellite view and company locations
-                    </p>
+            {/* Loading Overlay */}
+            {isLoading && (
+              <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                <Card className="p-4">
+                  <div className="flex items-center space-x-3">
+                    <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                    <div>
+                      <p className="font-medium">Loading Map...</p>
+                      <p className="text-xs text-muted-foreground">
+                        Initializing satellite view and company locations
+                      </p>
+                    </div>
                   </div>
-                </div>
-              </Card>
-            </div>
-          )}
+                </Card>
+              </div>
+            )}
 
-          {/* Error Display */}
-          {error && (
-            <div className="absolute top-4 left-4 right-4">
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            </div>
-          )}
+            {/* Error Display */}
+            {error && (
+              <div className="absolute top-4 left-4 right-4">
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              </div>
+            )}
 
-          {/* API Progress Display */}
-          {!isLoading && totalApiRequests > 0 && apiRequestsCompleted < totalApiRequests && (
-            <div className="absolute top-4 left-4">
-              <Card className="p-3 bg-background/90 backdrop-blur-sm">
+            {/* API Progress Display */}
+            {!isLoading && totalApiRequests > 0 && apiRequestsCompleted < totalApiRequests && (
+              <div className="absolute top-4 left-4">
+                <Card className="p-3 bg-background/90 backdrop-blur-sm">
+                  <div className="flex items-center space-x-2">
+                    <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                    <span className="text-sm">
+                      Finding similar areas... {apiRequestsCompleted}/{totalApiRequests}
+                    </span>
+                  </div>
+                </Card>
+              </div>
+            )}
+          </div>
+        </Card>
+
+        {/* Info Panel - 25% width */}
+        <Card className="flex-1 p-4 overflow-auto">
+          <div className="h-full">
+            {selectedArea ? (
+              <div className="space-y-4">
                 <div className="flex items-center space-x-2">
-                  <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                  <span className="text-sm">
-                    Finding similar areas... {apiRequestsCompleted}/{totalApiRequests}
-                  </span>
+                  <div className={`w-3 h-3 rounded ${selectedArea.type === 'company' ? 'bg-red-500' : 'bg-green-500'}`}></div>
+                  <h4 className="font-semibold">
+                    {selectedArea.type === 'company' ? 'Company Area' : 'Similar Area'}
+                  </h4>
                 </div>
-              </Card>
-            </div>
-          )}
-        </div>
-      </Card>
+                
+                {selectedArea.type === 'similar' && (
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium">Position:</span>
+                      <Badge variant="outline">{selectedArea.data.position}</Badge>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium">Rank:</span>
+                      <Badge variant="secondary">#{selectedArea.data.rank}</Badge>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium">Similarity:</span>
+                      <span className="text-sm font-mono">{(selectedArea.data.similarity * 100).toFixed(1)}%</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium">Center:</span>
+                      <span className="text-xs font-mono">
+                        {(() => {
+                          const [minLng, minLat, maxLng, maxLat] = selectedArea.data.bbox;
+                          const centerLng = ((minLng + maxLng) / 2).toFixed(4);
+                          const centerLat = ((minLat + maxLat) / 2).toFixed(4);
+                          return `${centerLat}°, ${centerLng}°`;
+                        })()}
+                      </span>
+                    </div>
+                    
+                    <div className="border-t pt-3">
+                      <h5 className="font-medium text-sm mb-2">Environmental Features</h5>
+                      <div className="space-y-2 text-xs">
+                        <div className="flex justify-between">
+                          <span>NDVI (vegetation):</span>
+                          <span className="font-mono">{selectedArea.data.features.ndvi_mean.toFixed(3)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Elevation:</span>
+                          <span className="font-mono">{selectedArea.data.features.elevation_mean.toFixed(1)}m</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Slope:</span>
+                          <span className="font-mono">{selectedArea.data.features.slope_mean.toFixed(1)}°</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>NDWI (water):</span>
+                          <span className="font-mono">{selectedArea.data.features.ndwi_mean.toFixed(3)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>NDBI (built-up):</span>
+                          <span className="font-mono">{selectedArea.data.features.ndbi_mean.toFixed(3)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Landcover diversity:</span>
+                          <span className="font-mono">{selectedArea.data.features.landcover_diversity} types</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {selectedArea.type === 'company' && (
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium">Name:</span>
+                      <span className="text-sm">{selectedArea.data.name}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium">Location:</span>
+                      <span className="text-sm">{selectedArea.data.location}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium">Center:</span>
+                      <span className="text-xs font-mono">
+                        {(() => {
+                          const [tlx, tly, brx, bry] = selectedArea.data.coordinates;
+                          const centerLng = ((tlx + brx) / 2).toFixed(4);
+                          const centerLat = ((tly + bry) / 2).toFixed(4);
+                          return `${centerLat}°, ${centerLng}°`;
+                        })()}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="flex items-center justify-center h-full text-center">
+                <div>
+                  <MapPin className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <h4 className="font-medium mb-2">Select an Area</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Click on a red (company) or green (similar) area on the map to view detailed information
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        </Card>
+      </div>
 
       {/* Analysis Button */}
       <div className="flex justify-center">

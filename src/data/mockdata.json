@@ -11,17 +11,17 @@
       {
         "name": "Profen Coal Mine",
         "location": "Elsteraue, Profen, Saxony-Anhalt, Germany",
-        "coordinates": [12.179, 51.149, 12.189, 51.139]
+        "coordinates": [12.074, 51.254, 12.294, 51.034]
       },
       {
         "name": "Inden Coal Mine",
         "location": "Inden, Aldenhoven, Jülich, North-Rhine Westphalia, Germany",
-        "coordinates": [6.345, 50.880, 6.355, 50.870]
+        "coordinates": [6.240, 50.985, 6.460, 50.765]
       },
       {
         "name": "Garzweiler Coal Mine",
         "location": "Bedburg, North-Rhine Westphalia, Germany",
-        "coordinates": [6.4479844, 51.0889989, 6.4579844, 51.0789989]
+        "coordinates": [6.3429844, 51.1939989, 6.5629844, 50.9739989]
       }
     ]
   },
@@ -37,7 +37,7 @@
       {
         "name": "KWB Sieniawa Coal Mine",
         "location": "Subcarpathian, Poland",
-        "coordinates": [15.364152, 52.383364, 15.374152, 52.373364]
+        "coordinates": [15.259152, 52.488364, 15.479152, 52.268364]
       }
     ]
   },
@@ -53,7 +53,7 @@
       {
         "name": "Vereinigtes Schleenhain Coal Mine",
         "location": "Groitzsch, Neukieritzsch, Saxony-Anhalt, Germany",
-        "coordinates": [12.381, 51.133, 12.391, 51.123]
+        "coordinates": [12.276, 51.238, 12.496, 51.018]
       }
     ]
   },
@@ -69,7 +69,7 @@
       {
         "name": "Nochten Coal Mine",
         "location": "Weißwasser, Boxberg, Saxony, Germany",
-        "coordinates": [14.569709, 51.462109, 14.579709, 51.452109]
+        "coordinates": [14.464709, 51.567109, 14.684709, 51.347109]
       }
     ]
   },
@@ -85,7 +85,7 @@
       {
         "name": "Nástup-Tušimice Coal Mine",
         "location": "Chomutov, Kadan, Ústí nad Labem, Czech Republic",
-        "coordinates": [13.381449, 50.411429, 13.391449, 50.401429]
+        "coordinates": [13.276449, 50.516429, 13.496449, 50.296429]
       }
     ]
   },
@@ -101,7 +101,7 @@
       {
         "name": "Tihange Nuclear Power Plant",
         "location": "Huy, Liège, Belgium",
-        "coordinates": [5.2119, 50.421, 5.2219, 50.411]
+        "coordinates": [5.1069, 50.526, 5.3269, 50.306]
       }
     ]
   },
@@ -117,7 +117,7 @@
       {
         "name": "Cattenom Nuclear Power Plant",
         "location": "Moselle, Grand Est, France",
-        "coordinates": [6.2164, 49.418, 6.2264, 49.408]
+        "coordinates": [6.1114, 49.523, 6.3314, 49.303]
       }
     ]
   },
@@ -130,7 +130,7 @@
       {
         "name": "Wiesengrund Power Station",
         "location": "Eisenach, Thüringen, Germany",
-        "coordinates": [10.314, 50.979, 10.324, 50.969]
+        "coordinates": [10.209, 51.084, 10.429, 50.864]
       }
     ]
   }

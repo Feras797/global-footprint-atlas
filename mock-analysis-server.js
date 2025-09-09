@@ -12,98 +12,110 @@ app.use(cors({
 
 app.use(express.json());
 
-/**
- * Calculate the width and height of a bounding box
- * @param {Array} coordinates - [tlx, tly, brx, bry] format
- * @returns {Object} - {width, height}
- */
-function calculateBoxDimensions(coordinates) {
-  const [tlx, tly, brx, bry] = coordinates;
-  const width = Math.abs(brx - tlx);
-  const height = Math.abs(tly - bry);
-  return { width, height };
-}
 
 /**
- * Generate a polygon in the required API format
- * @param {number} centerLng - Center longitude
- * @param {number} centerLat - Center latitude  
- * @param {number} width - Box width
- * @param {number} height - Box height
- * @returns {Array} - Polygon coordinates in [[lng, lat]] format
+ * Generate response in real API format
+ * @param {Array} redBoxCoordinates - [tlx, tly, brx, bry] format (reference bbox)
+ * @returns {Object} - Real API format response
  */
-function generatePolygon(centerLng, centerLat, width, height) {
-  const halfWidth = width / 2;
-  const halfHeight = height / 2;
+function generateRealAPIResponse(redBoxCoordinates) {
+  const [minLng, maxLat, maxLng, minLat] = redBoxCoordinates; // [tlx, tly, brx, bry]
   
-  // Create rectangle polygon (clockwise from top-left)
-  return [
-    [centerLng - halfWidth, centerLat + halfHeight], // top-left
-    [centerLng + halfWidth, centerLat + halfHeight], // top-right
-    [centerLng + halfWidth, centerLat - halfHeight], // bottom-right
-    [centerLng - halfWidth, centerLat - halfHeight], // bottom-left
-    [centerLng - halfWidth, centerLat + halfHeight]  // close polygon
-  ];
-}
-
-/**
- * Generate green box areas around the red box location
- * @param {Array} redBoxCoordinates - [tlx, tly, brx, bry] format
- * @returns {Array} - Array of similar areas in API format
- */
-function generateSimilarAreas(redBoxCoordinates) {
-  const { width, height } = calculateBoxDimensions(redBoxCoordinates);
+  // Calculate bbox size for similar areas
+  const width = maxLng - minLng;
+  const height = maxLat - minLat;
   
-  // Calculate center of red box
-  const [tlx, tly, brx, bry] = redBoxCoordinates;
-  const redCenterLng = (tlx + brx) / 2;
-  const redCenterLat = (tly + bry) / 2;
-  
-  // Generate 3 green boxes at different locations but same size
-  const areas = [
-    {
-      name: "Gold",
-      similarity: 0.8576694346485472,
-      rank: 1,
-      position: 2,
-      // Offset by reasonable distance (different city/region)
-      centerLng: redCenterLng + (Math.random() * 1.0 + 0.5) * (Math.random() > 0.5 ? 1 : -1), // 0.5-1.5 degrees away
-      centerLat: redCenterLat + (Math.random() * 0.5 + 0.3) * (Math.random() > 0.5 ? 1 : -1)  // 0.3-0.8 degrees away
+  return {
+    "status": "success",
+    "timestamp": new Date().toISOString(),
+    "config": {
+      "reference_bbox": [minLng, minLat, maxLng, maxLat], // Convert to [minLng, minLat, maxLng, maxLat]
+      "start_date": "2022-01-01",
+      "end_date": "2023-12-31",
+      "search_radius_km": 400,
+      "sampling_resolution_m": 25000,
+      "max_candidates": 20,
+      "similarity_threshold": 0.5,
+      "weights": {
+        "ndvi": 0.4,
+        "elevation": 0.2,
+        "slope": 0.2,
+        "landcover": 0.2
+      }
     },
-    {
-      name: "Silver", 
-      similarity: 0.691315995333693,
-      rank: 2,
-      position: 12,
-      centerLng: redCenterLng + (Math.random() * 1.2 + 0.7) * (Math.random() > 0.5 ? 1 : -1), // 0.7-1.9 degrees away
-      centerLat: redCenterLat + (Math.random() * 0.6 + 0.4) * (Math.random() > 0.5 ? 1 : -1)  // 0.4-1.0 degrees away
+    "reference": {
+      "bbox": [minLng, minLat, maxLng, maxLat]
     },
-    {
-      name: "Bronze",
-      similarity: 0.5969797768677286,
-      rank: 3,
-      position: 6,
-      centerLng: redCenterLng + (Math.random() * 1.5 + 0.8) * (Math.random() > 0.5 ? 1 : -1), // 0.8-2.3 degrees away
-      centerLat: redCenterLat + (Math.random() * 0.7 + 0.5) * (Math.random() > 0.5 ? 1 : -1)  // 0.5-1.2 degrees away
-    }
-  ];
-  
-  // Convert to API format
-  return areas.map(area => ({
-    geometry: {
-      xg: null,
-      args: null,
-      ol: null,
-      la: null,
-      rm: "Polygon",
-      ja: [generatePolygon(area.centerLng, area.centerLat, width, height)],
-      da: null
-    },
-    similarity: area.similarity,
-    position: area.position,
-    rank: area.rank,
-    name: area.name
-  }));
+    "candidates_generated": 20,
+    "top_matches": [
+      {
+        "rank": 1,
+        "index": 19,
+        "position": "G2x2",
+        "similarity": 0.8475872899136501,
+        "bbox": (() => {
+          const offsetLng = minLng + 1.5 + Math.random() * 0.5;
+          const offsetLat = minLat - 0.8 + Math.random() * 0.3;
+          return [offsetLng, offsetLat, offsetLng + width, offsetLat + height];
+        })(),
+        "features": {
+          "ndvi_mean": 0.6399730545512436,
+          "ndvi_std": 0.1933439436993898,
+          "elevation_mean": 236.24505001934136,
+          "elevation_std": 69.8139695372853,
+          "slope_mean": 5.560540045601997,
+          "slope_std": 4.263754629431046,
+          "ndwi_mean": -0.6184049436709766,
+          "ndbi_mean": -0.1782257237389115,
+          "landcover_diversity": 6
+        }
+      },
+      {
+        "rank": 2,
+        "index": 10,
+        "position": "G1x1",
+        "similarity": 0.7969215788044441,
+        "bbox": (() => {
+          const offsetLng = minLng - 1.2 + Math.random() * 0.4;
+          const offsetLat = minLat + 0.6 + Math.random() * 0.2;
+          return [offsetLng, offsetLat, offsetLng + width, offsetLat + height];
+        })(),
+        "features": {
+          "ndvi_mean": 0.6315502851025512,
+          "ndvi_std": 0.15988132148153006,
+          "elevation_mean": 287.2204410316737,
+          "elevation_std": 60.365805327301565,
+          "slope_mean": 8.452073093521543,
+          "slope_std": 5.399999718639627,
+          "ndwi_mean": -0.623306043707719,
+          "ndbi_mean": -0.17519749822755779,
+          "landcover_diversity": 5
+        }
+      },
+      {
+        "rank": 3,
+        "index": 3,
+        "position": "G0x2",
+        "similarity": 0.7659304641433505,
+        "bbox": (() => {
+          const offsetLng = minLng + 0.8 + Math.random() * 0.3;
+          const offsetLat = minLat + 1.1 + Math.random() * 0.2;
+          return [offsetLng, offsetLat, offsetLng + width, offsetLat + height];
+        })(),
+        "features": {
+          "ndvi_mean": 0.6351344347266186,
+          "ndvi_std": 0.16594679699292222,
+          "elevation_mean": 287.19857300875316,
+          "elevation_std": 70.27756014429106,
+          "slope_mean": 4.641306946789014,
+          "slope_std": 3.7083253165939953,
+          "ndwi_mean": -0.627199374882451,
+          "ndbi_mean": -0.19715395935091873,
+          "landcover_diversity": 6
+        }
+      }
+    ]
+  };
 }
 
 // Mock analysis endpoint
@@ -124,13 +136,13 @@ app.post('/analyze-area', async (req, res) => {
     // Add small delay to simulate real API processing
     await new Promise(resolve => setTimeout(resolve, 800 + Math.random() * 400)); // 800-1200ms
     
-    // Generate similar areas
-    const similarAreas = generateSimilarAreas(coordinates);
+    // Generate response in real API format
+    const apiResponse = generateRealAPIResponse(coordinates);
     
-    console.log('✅ Generated similar areas:', similarAreas.length);
-    console.log('📊 Areas:', similarAreas.map(a => `${a.name} (${(a.similarity * 100).toFixed(1)}%)`).join(', '));
+    console.log('✅ Generated response with', apiResponse.top_matches.length, 'matches');
+    console.log('📊 Similarities:', apiResponse.top_matches.map(m => `${m.position} (Rank ${m.rank}): ${(m.similarity * 100).toFixed(1)}%`).join(', '));
     
-    res.json(similarAreas);
+    res.json(apiResponse);
     
   } catch (error) {
     console.error('❌ Analysis error:', error);
