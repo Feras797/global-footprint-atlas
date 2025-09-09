@@ -35,12 +35,34 @@ interface CompanyCardProps {
   className?: string
 }
 
+// Deterministic pseudo-random helpers for stable mock data per company
+const hashStringToSeed = (str: string) => {
+  let hash = 2166136261
+  for (let i = 0; i < str.length; i++) {
+    hash ^= str.charCodeAt(i)
+    hash = (hash * 16777619) >>> 0
+  }
+  return hash >>> 0
+}
+
+const createSeededRandom = (seed: number) => {
+  let state = seed >>> 0
+  return () => {
+    state = (1664525 * state + 1013904223) >>> 0
+    return state / 4294967296
+  }
+}
+
 // Mock trend data - in real app this would come from API
-const generateMockTrend = () => ({
-  direction: 'down' as const,
-  value: Math.floor(Math.random() * 5) + 1,
-  period: 'this month'
-})
+const generateMockTrend = (id: string) => {
+  const rng = createSeededRandom(hashStringToSeed(id))
+  const value = Math.floor(rng() * 5) + 1
+  return {
+    direction: 'down' as const,
+    value,
+    period: 'this month'
+  }
+}
 
 const CompanyTypeIcon = ({ type }: { type: string }) => {
   const iconMap = {
@@ -69,8 +91,14 @@ const getTypeColor = (type: string) => {
 }
 
 // Simple sparkline component
-const Sparkline = ({ className }: { className?: string }) => {
-  const points = Array.from({ length: 12 }, () => Math.random() * 40 + 10)
+const Sparkline = ({ className, seed }: { className?: string, seed?: string }) => {
+  const points = React.useMemo(() => {
+    const rng = seed ? createSeededRandom(hashStringToSeed(seed)) : null
+    return Array.from({ length: 12 }, () => {
+      const r = rng ? rng() : Math.random()
+      return r * 40 + 10
+    })
+  }, [seed])
   const maxValue = Math.max(...points)
   const minValue = Math.min(...points)
   const range = maxValue - minValue || 1
@@ -106,7 +134,7 @@ export const CompanyCard = ({
   className
 }: CompanyCardProps) => {
   const navigate = useNavigate()
-  const trend = generateMockTrend()
+  const trend = React.useMemo(() => generateMockTrend(company.id), [company.id])
 
   const handleCardClick = () => {
     onSelect(company)
@@ -219,7 +247,7 @@ export const CompanyCard = ({
             </div>
             
             <div className="flex justify-end">
-              <Sparkline className="opacity-70 group-hover:opacity-100 transition-opacity" />
+              <Sparkline className="opacity-70 group-hover:opacity-100 transition-opacity" seed={company.id} />
             </div>
           </div>
         </div>
