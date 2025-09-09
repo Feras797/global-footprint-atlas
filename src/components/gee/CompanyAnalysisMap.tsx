@@ -9,8 +9,8 @@ import { AlertCircle, Loader2, MapPin } from 'lucide-react';
 // Google Maps API key
 const GOOGLE_MAPS_API_KEY = 'AIzaSyDxCaV_ArUKahmWNSsO2OVni3dUoPSqfPI';
 
-// API endpoint placeholder
-const ANALYSIS_API_ENDPOINT = 'https://api.your-backend.com/analyze-area';
+// Local mock API endpoint
+const ANALYSIS_API_ENDPOINT = 'http://localhost:3002/analyze-area';
 
 interface CompanyLocation {
   name: string;
@@ -231,6 +231,7 @@ export const CompanyAnalysisMap: React.FC<AnalysisMapProps> = ({
   const fetchSimilarAreas = async (coordinates: [number, number, number, number]) => {
     try {
       console.log('📡 Requesting similar areas for coordinates:', coordinates);
+      console.log('🔗 Using endpoint:', ANALYSIS_API_ENDPOINT);
       
       const response = await fetch(ANALYSIS_API_ENDPOINT, {
         method: 'POST',
@@ -240,8 +241,10 @@ export const CompanyAnalysisMap: React.FC<AnalysisMapProps> = ({
         body: JSON.stringify({ coordinates }),
       });
 
+      console.log('📡 Response status:', response.status, response.statusText);
+
       if (!response.ok) {
-        throw new Error(`API request failed: ${response.status}`);
+        throw new Error(`API request failed: ${response.status} ${response.statusText}`);
       }
 
       const data = await response.json();
@@ -272,12 +275,13 @@ export const CompanyAnalysisMap: React.FC<AnalysisMapProps> = ({
       }
 
       console.log('✅ Parsed similar areas:', newSimilarAreas);
+      console.log('🟢 API call successful - received', newSimilarAreas.length, 'green areas');
       setSimilarAreas(prev => [...prev, ...newSimilarAreas]);
       
     } catch (error) {
-      console.warn('⚠️ API request failed, using mock data for demo:', error);
-      // For now, create mock similar areas for demo
-      createMockSimilarAreas(coordinates);
+      console.error('❌ API request failed:', error);
+      console.log('❌ No green boxes will be shown - server must be running');
+      // Don't create mock data - only show green boxes from real API response
     } finally {
       setApiRequestsCompleted(prev => {
         const newCount = prev + 1;
@@ -289,39 +293,6 @@ export const CompanyAnalysisMap: React.FC<AnalysisMapProps> = ({
     }
   };
 
-  /**
-   * Create mock similar areas for demo (until API is ready)
-   */
-  const createMockSimilarAreas = (baseCoords: [number, number, number, number]) => {
-    const [tlx, tly, brx, bry] = baseCoords;
-    const centerLng = (tlx + brx) / 2;
-    const centerLat = (tly + bry) / 2;
-    
-    // Generate 3 mock similar areas around the base coordinates
-    const mockAreas: SimilarArea[] = [
-      {
-        coordinates: [centerLng + 0.02, centerLat + 0.01, centerLng + 0.03, centerLat],
-        similarity: 0.95,
-        rank: 1,
-        name: "Mock Gold"
-      },
-      {
-        coordinates: [centerLng - 0.03, centerLat + 0.02, centerLng - 0.02, centerLat + 0.01],
-        similarity: 0.87,
-        rank: 2,
-        name: "Mock Silver"
-      },
-      {
-        coordinates: [centerLng + 0.01, centerLat - 0.02, centerLng + 0.02, centerLat - 0.01],
-        similarity: 0.76,
-        rank: 3,
-        name: "Mock Bronze"
-      }
-    ];
-
-    console.log('🎭 Created mock similar areas:', mockAreas);
-    setSimilarAreas(prev => [...prev, ...mockAreas]);
-  };
 
   /**
    * Plot green squares for similar areas
@@ -422,7 +393,28 @@ export const CompanyAnalysisMap: React.FC<AnalysisMapProps> = ({
 
   const handlePerformAnalysis = () => {
     console.log('🔬 Performing detailed analysis for all areas...');
+    console.log('📊 Analysis data:', {
+      redAreas: locations.length,
+      greenAreas: similarAreas.length,
+      totalAreas: locations.length + similarAreas.length
+    });
+    
+    // Log the areas for verification
+    console.log('🔴 Company areas:', locations.map(loc => ({
+      name: loc.name,
+      coordinates: loc.coordinates
+    })));
+    
+    console.log('🟢 Similar areas:', similarAreas.map(area => ({
+      name: area.name,
+      rank: area.rank,
+      similarity: `${(area.similarity * 100).toFixed(1)}%`,
+      coordinates: area.coordinates
+    })));
+    
     // This will trigger the detailed analysis API call later
+    // For now, just show that the analysis is ready
+    alert(`Analysis ready!\n\nCompany Areas: ${locations.length}\nSimilar Areas: ${similarAreas.length}\n\nReady to proceed with detailed environmental analysis.`);
   };
 
   // Helper function to generate mock environmental data
