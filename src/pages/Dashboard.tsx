@@ -4,7 +4,8 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { Sidebar } from "@/components/Sidebar";
 import { CompanyList } from "@/components/CompanyList";
 import { DashboardMap } from "@/components/DashboardMap";
-import { CesiumGlobe } from "@/components/CesiumGlobe";
+import { MapLibre3DGlobe } from "@/components/MapLibre3DGlobe";
+import { SimpleMapLibreGlobe } from "@/components/SimpleMapLibreGlobe";
 import { RegionAnalyzer } from "@/components/RegionAnalyzer";
 import { CompanyReport } from "@/components/CompanyReport";
 import { Card } from "@/components/ui/card";
@@ -25,7 +26,7 @@ interface CompanyLocation {
   country: string;
 }
 
-export type DashboardView = 'overview' | 'companies' | 'regions' | 'analysis' | 'reports' | 'settings';
+export type DashboardView = 'overview' | 'companies' | 'regions' | 'reports' | 'settings';
 
 const Dashboard = () => {
   const [activeView, setActiveView] = useState<DashboardView>('overview');
@@ -39,7 +40,7 @@ const Dashboard = () => {
 
   // Removed GEE Analysis state - using simplified approach
 
-  // Convert our unified companies to format CesiumGlobe expects
+  // Convert our unified companies to format MapLibre3DGlobe expects
   const globeCompanies: CompanyData[] = companiesData.map(company => ({
     company: company.name,
     Industry: company.industry,
@@ -73,7 +74,7 @@ const Dashboard = () => {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const view = params.get('view') as DashboardView | null
-    if (view && ['overview','companies','regions','analysis','reports','settings'].includes(view)) {
+    if (view && ['overview','companies','regions','reports','settings'].includes(view)) {
       setActiveView(view)
     }
   }, [])
@@ -100,7 +101,7 @@ const Dashboard = () => {
                   </Badge>
                 </div>
                 <div className="h-96">
-                  <CesiumGlobe 
+                  <SimpleMapLibreGlobe 
                     companies={globeCompanies}
                     onEntitySelect={setSelectedGlobeEntity}
                     showControls={true}
@@ -137,44 +138,7 @@ const Dashboard = () => {
         );
 
       case 'regions':
-        return (
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-bold">Region Analysis</h2>
-            </div>
-            <RegionAnalyzer />
-          </div>
-        );
-
-      case 'analysis':
-        return (
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-2xl font-bold">Satellite Analysis</h2>
-                <p className="text-muted-foreground mt-1">
-                  Environmental analysis is now available on individual company pages
-                </p>
-              </div>
-              <Badge variant="secondary" className="text-xs">
-                Available on Company Pages
-              </Badge>
-            </div>
-            
-            <Card className="p-8 text-center">
-              <div className="space-y-4">
-                <div className="text-6xl">🛰️</div>
-                <h3 className="text-xl font-semibold">Analysis Available on Company Pages</h3>
-                <p className="text-muted-foreground max-w-md mx-auto">
-                  Visit any company page to see real-time satellite analysis with red company areas and green similar regions.
-                </p>
-                <Button onClick={() => setActiveView('companies')} className="mt-4">
-                  View Companies
-                </Button>
-              </div>
-            </Card>
-          </div>
-        );
+        return <RegionAnalyzer />;
 
       default:
         return (
