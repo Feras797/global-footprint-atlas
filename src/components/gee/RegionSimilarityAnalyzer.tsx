@@ -169,55 +169,65 @@ export const RegionSimilarityAnalyzer: React.FC<RegionAnalysisProps> = ({
   // Check if we have region coordinates for analysis
   const isAnalysisEnabled = region.rectangleCoordinates && region.rectangleCoordinates.length === 4
 
-  // Initialize Google Maps
+  // Initialize Google Maps (aligned with CompanyAnalysisMap approach)
   useEffect(() => {
-    const loader = new Loader({
-      apiKey: GOOGLE_MAPS_API_KEY,
-      version: 'weekly',
-      libraries: ['places', 'drawing']
-    })
+    const initializeGoogleMaps = async () => {
+      if (!mapRef.current) return
 
-    loader
-      .load()
-      .then(() => {
-        if (mapRef.current) {
-          const map = new google.maps.Map(mapRef.current, {
-            center: { lat: region.coordinates.lat, lng: region.coordinates.lng },
-            zoom: 8,
-            mapTypeId: 'satellite'
+      try {
+        const loader = new Loader({
+          apiKey: GOOGLE_MAPS_API_KEY,
+          version: 'weekly',
+          libraries: ['geometry']  // Match CompanyAnalysisMap libraries
+        })
+
+        await loader.load()
+        
+        const map = new google.maps.Map(mapRef.current, {
+          center: { lat: region.coordinates.lat, lng: region.coordinates.lng },
+          zoom: 8,
+          mapTypeId: google.maps.MapTypeId.SATELLITE,
+          mapTypeControl: true,
+          streetViewControl: false,
+          fullscreenControl: false
+        })
+
+        mapInstance.current = map
+        setIsMapLoaded(true)
+
+        // Draw the region if coordinates are available
+        if (region.rectangleCoordinates) {
+          const [tlx, tly, brx, bry] = region.rectangleCoordinates
+          
+          const rectangle = new google.maps.Rectangle({
+            bounds: {
+              north: Math.max(tly, bry),
+              south: Math.min(tly, bry),
+              east: Math.max(tlx, brx),
+              west: Math.min(tlx, brx)
+            },
+            fillColor: '#ef4444',
+            fillOpacity: 0.35,
+            strokeColor: '#dc2626',
+            strokeOpacity: 0.8,
+            strokeWeight: 2,
+            clickable: true,
+            map: map
           })
 
-          mapInstance.current = map
-          setIsMapLoaded(true)
-
-          // Draw the region if coordinates are available
-          if (region.rectangleCoordinates) {
-            const [tlx, tly, brx, bry] = region.rectangleCoordinates
-            
-            const rectangle = new google.maps.Rectangle({
-              bounds: {
-                north: Math.max(tly, bry),
-                south: Math.min(tly, bry),
-                east: Math.max(tlx, brx),
-                west: Math.min(tlx, brx)
-              },
-              fillColor: '#FF0000',
-              fillOpacity: 0.35,
-              strokeColor: '#FF0000',
-              strokeOpacity: 0.8,
-              strokeWeight: 2,
-              map: map
-            })
-
-            // Fit map to show the region
-            map.fitBounds(rectangle.getBounds()!)
-          }
+          // Fit map to show the region
+          map.fitBounds(rectangle.getBounds()!)
         }
-      })
-      .catch((error) => {
-        console.error('Error loading Google Maps:', error)
-        setError('Failed to load map. Please try again.')
-      })
+
+        console.log('🗺️ Google Maps initialized successfully for custom region')
+
+      } catch (error) {
+        console.error('❌ Failed to initialize Google Maps:', error)
+        setError('Failed to load Google Maps. Please try again.')
+      }
+    }
+
+    initializeGoogleMaps()
   }, [region])
 
   const performSimilarityAnalysis = async () => {
@@ -265,7 +275,7 @@ export const RegionSimilarityAnalyzer: React.FC<RegionAnalysisProps> = ({
       setAnalysisProgress(80)
       setStatusMessage('Updating map visualization...')
 
-      // Draw green areas on map
+      // Draw green areas on map (aligned with CompanyAnalysisMap style)
       if (mapInstance.current) {
         similarAreas.forEach((area, index) => {
           const [minLng, minLat, maxLng, maxLat] = area.bbox
@@ -277,32 +287,28 @@ export const RegionSimilarityAnalyzer: React.FC<RegionAnalysisProps> = ({
               east: maxLng,
               west: minLng
             },
-            fillColor: '#00FF00',
-            fillOpacity: 0.25,
-            strokeColor: '#00FF00',
+            fillColor: '#22c55e',
+            fillOpacity: 0.3,
+            strokeColor: '#16a34a',
             strokeOpacity: 0.8,
-            strokeWeight: 1,
+            strokeWeight: 3,
+            clickable: true,
             map: mapInstance.current
           })
 
-          // Add info window
-          const infoWindow = new google.maps.InfoWindow({
-            content: `
-              <div class="p-2">
-                <h4 class="font-semibold">Similar Region ${area.rank}</h4>
-                <p class="text-sm">Similarity: ${(area.similarity * 100).toFixed(1)}%</p>
-                <p class="text-sm">NDVI: ${area.features.ndvi_mean.toFixed(2)}</p>
-                <p class="text-sm">Elevation: ${area.features.elevation_mean.toFixed(0)}m</p>
-              </div>
-            `
+          // Add click handler (no info windows to match company style)
+          rectangle.addListener('click', () => {
+            console.log(`🟢 Clicked similar area: Position ${area.position} (Rank ${area.rank}), similarity: ${(area.similarity * 100).toFixed(1)}%`)
+            console.log('📊 Environmental features:', area.features)
           })
 
-          rectangle.addListener('click', () => {
-            infoWindow.setPosition({
-              lat: (minLat + maxLat) / 2,
-              lng: (minLng + maxLng) / 2
-            })
-            infoWindow.open(mapInstance.current)
+          // Add hover effects to match CompanyAnalysisMap
+          rectangle.addListener('mouseover', () => {
+            rectangle.setOptions({ fillOpacity: 0.5, strokeWeight: 4 })
+          })
+
+          rectangle.addListener('mouseout', () => {
+            rectangle.setOptions({ fillOpacity: 0.3, strokeWeight: 3 })
           })
         })
       }
@@ -311,12 +317,32 @@ export const RegionSimilarityAnalyzer: React.FC<RegionAnalysisProps> = ({
       setStatusMessage('Analysis completed successfully!')
       setAnalysisCompleted(true)
 
-      // Trigger callbacks
-      onAnalysisComplete?.([redArea], similarAreas)
+      // Trigger callbacks (aligned with CompanyAnalysisMap format)
+      const redAreasData = [{
+        name: redArea.name,
+        coordinates: redArea.coordinates,
+        location: redArea.location,
+        environmentalData: null // Custom regions don't have environmental features yet
+      }]
+      
+      const greenAreasData = similarAreas.map((area, index) => ({
+        name: `Area ${area.position}`,
+        coordinates: area.bbox,
+        location: 'Environmentally Similar Region',
+        similarity: area.similarity,
+        rank: area.rank,
+        environmentalData: area.features
+      }))
+
+      onAnalysisComplete?.(redAreasData, greenAreasData)
       onAnalysisPerformed?.({
-        redAreas: [redArea],
-        greenAreas: similarAreas,
-        apiResponse: apiData
+        redAreas: redAreasData,
+        greenAreas: greenAreasData,
+        apiResponse: apiData,
+        status: "success",
+        timestamp: new Date().toISOString(),
+        total_requests: 1,
+        batch_results: [apiData]
       })
 
     } catch (error) {
