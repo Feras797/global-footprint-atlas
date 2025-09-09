@@ -19,7 +19,8 @@ import {
   FileText, 
   Settings,
   Home,
-  LogOut
+  LogOut,
+  Satellite
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { DashboardView } from "@/pages/Dashboard";
@@ -47,6 +48,12 @@ const menuItems = [
     icon: MapPin,
     view: 'regions' as DashboardView,
     description: "Analyze regions"
+  },
+  {
+    title: "Satellite Analysis",
+    icon: Satellite,
+    view: 'analysis' as DashboardView,
+    description: "Earth Engine similarity analysis"
   },
   {
     title: "Settings",

@@ -3,6 +3,7 @@ import { companies as companiesData } from '@/lib/companies'
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { Sidebar } from "@/components/Sidebar";
 import { CompanyList } from "@/components/CompanyList";
+import { MockCompanyList } from "@/components/MockCompanyList";
 import { DashboardMap } from "@/components/DashboardMap";
 import { CesiumGlobe } from "@/components/CesiumGlobe";
 import { RegionAnalyzer } from "@/components/RegionAnalyzer";
@@ -19,6 +20,8 @@ import {
 import { CompanyData, GlobeEntity } from "@/types/globe";
 import mockDataJson from "@/data/mockdata.json";
 
+// Removed old GEE Analysis imports - using simplified approach now
+
 interface CompanyLocation {
   id: string;
   name: string;
@@ -28,7 +31,7 @@ interface CompanyLocation {
   country: string;
 }
 
-export type DashboardView = 'overview' | 'companies' | 'regions' | 'reports' | 'settings';
+export type DashboardView = 'overview' | 'companies' | 'regions' | 'analysis' | 'reports' | 'settings';
 
 const Dashboard = () => {
   const [activeView, setActiveView] = useState<DashboardView>('overview');
@@ -40,6 +43,8 @@ const Dashboard = () => {
     impactRange: [0, 100] as [number, number],
     timeRange: '2024'
   });
+
+  // Removed GEE Analysis state - using simplified approach
 
   // Load data from mockdata.JSON file
   const mockCompanies: MockCompanyData[] = mockDataJson as MockCompanyData[];
@@ -56,7 +61,7 @@ const Dashboard = () => {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const view = params.get('view') as DashboardView | null
-    if (view && ['overview','companies','regions','reports','settings'].includes(view)) {
+    if (view && ['overview','companies','regions','analysis','reports','settings'].includes(view)) {
       setActiveView(view)
     }
   }, [])
@@ -91,13 +96,16 @@ const Dashboard = () => {
               </Card>
 
               {/* Company List Panel */}
-              <Card className="p-6">
-                <h3 className="text-lg font-semibold mb-4">Recent Analysis</h3>
-                <CompanyList 
-                  companies={companyLocations}
-                  onCompanySelect={setSelectedCompany}
-                />
-              </Card>
+              <div className="space-y-4">
+                <MockCompanyList />
+                <Card className="p-6">
+                  <h3 className="text-lg font-semibold mb-4">Legacy Companies</h3>
+                  <CompanyList 
+                    companies={companyLocations}
+                    onCompanySelect={setSelectedCompany}
+                  />
+                </Card>
+              </div>
             </div>
           </div>
         );
@@ -124,6 +132,36 @@ const Dashboard = () => {
               <h2 className="text-2xl font-bold">Region Analysis</h2>
             </div>
             <RegionAnalyzer />
+          </div>
+        );
+
+      case 'analysis':
+        return (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold">Satellite Analysis</h2>
+                <p className="text-muted-foreground mt-1">
+                  Environmental analysis is now available on individual company pages
+                </p>
+              </div>
+              <Badge variant="secondary" className="text-xs">
+                Available on Company Pages
+              </Badge>
+            </div>
+            
+            <Card className="p-8 text-center">
+              <div className="space-y-4">
+                <div className="text-6xl">🛰️</div>
+                <h3 className="text-xl font-semibold">Analysis Available on Company Pages</h3>
+                <p className="text-muted-foreground max-w-md mx-auto">
+                  Visit any company page to see real-time satellite analysis with red company areas and green similar regions.
+                </p>
+                <Button onClick={() => setActiveView('companies')} className="mt-4">
+                  View Companies
+                </Button>
+              </div>
+            </Card>
           </div>
         );
 
