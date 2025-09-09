@@ -8,10 +8,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { MapLibreRegionSelector } from "@/components/MapLibreRegionSelector";
 import { EnvironmentalDashboard } from "@/components/environmental/EnvironmentalDashboard";
+import { RegionSimilarityAnalyzer } from "@/components/gee/RegionSimilarityAnalyzer";
 import { 
   MapPin, 
   Plus, 
-  Search, 
   Trash2, 
   Edit, 
   Download,
@@ -90,6 +90,12 @@ export const RegionAnalyzer = () => {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showMapSelector, setShowMapSelector] = useState(false);
   const [analyzingRegion, setAnalyzingRegion] = useState<Region | null>(null);
+  const [showSimilarityAnalysis, setShowSimilarityAnalysis] = useState(false);
+  const [analysisData, setAnalysisData] = useState<{
+    redAreas: any[];
+    greenAreas: any[];
+    apiResponse?: any;
+  }>({ redAreas: [], greenAreas: [] });
   const [newRegion, setNewRegion] = useState({
     name: '',
     lat: '',
@@ -169,7 +175,33 @@ export const RegionAnalyzer = () => {
   };
 
   const handleAnalyzeRegion = (region: Region) => {
-    setAnalyzingRegion(region);
+    // Check if region has coordinates for analysis
+    if (region.rectangleCoordinates && region.rectangleCoordinates.length === 4) {
+      setAnalyzingRegion(region);
+      setShowSimilarityAnalysis(true);
+    } else {
+      // Fallback to mock data analysis for regions without coordinates
+      setAnalyzingRegion(region);
+      setShowSimilarityAnalysis(false);
+    }
+  };
+
+  const handleAnalysisComplete = (redAreas: any[], greenAreas: any[]) => {
+    setAnalysisData({ redAreas, greenAreas });
+  };
+
+  const handleAnalysisPerformed = (batchAnalysisData?: any) => {
+    setAnalysisData(prev => ({
+      ...prev,
+      apiResponse: batchAnalysisData
+    }));
+    setShowSimilarityAnalysis(false);
+  };
+
+  const handleCloseAnalysis = () => {
+    setAnalyzingRegion(null);
+    setShowSimilarityAnalysis(false);
+    setAnalysisData({ redAreas: [], greenAreas: [] });
   };
 
   const getTypeColor = (type: Region['type']) => {
@@ -183,12 +215,24 @@ export const RegionAnalyzer = () => {
     }
   };
 
-  // Show environmental dashboard if analyzing a region
-  if (analyzingRegion) {
+  // Show similarity analysis interface if analyzing a region with coordinates
+  if (analyzingRegion && showSimilarityAnalysis) {
+    return (
+      <RegionSimilarityAnalyzer
+        region={analyzingRegion}
+        onAnalysisComplete={handleAnalysisComplete}
+        onAnalysisPerformed={handleAnalysisPerformed}
+      />
+    )
+  }
+
+  // Show environmental dashboard if analyzing a region (after analysis or for regions without coordinates)
+  if (analyzingRegion && !showSimilarityAnalysis) {
     return (
       <EnvironmentalDashboard
         regionName={analyzingRegion.name}
-        onClose={() => setAnalyzingRegion(null)}
+        onClose={handleCloseAnalysis}
+        analysisData={analysisData}
       />
     )
   }
@@ -454,6 +498,12 @@ export const RegionAnalyzer = () => {
                 <div className="text-xs text-white/70">
                   Created {region.createdAt.toLocaleDateString()}
                 </div>
+                
+                {region.rectangleCoordinates && region.rectangleCoordinates.length === 4 && (
+                  <Badge variant="secondary" className="text-xs px-2 py-1">
+                    🛰️ Real Analysis
+                  </Badge>
+                )}
               </div>
 
               {/* Description */}

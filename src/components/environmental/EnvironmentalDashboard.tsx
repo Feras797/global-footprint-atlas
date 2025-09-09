@@ -34,11 +34,16 @@ interface EnvironmentalDashboardProps {
   regionName: string
   onClose?: () => void
   showCloseButton?: boolean
+  analysisData?: {
+    redAreas: any[]
+    greenAreas: any[]
+    apiResponse?: any
+  }
 }
 
 type TimeRange = '6m' | '1y' | '2y' | 'all'
 
-export function EnvironmentalDashboard({ regionName, onClose, showCloseButton = true }: EnvironmentalDashboardProps) {
+export function EnvironmentalDashboard({ regionName, onClose, showCloseButton = true, analysisData }: EnvironmentalDashboardProps) {
   const [selectedMetric, setSelectedMetric] = useState(metricConfigs[0].key)
   const [timeRange, setTimeRange] = useState<TimeRange>('all')
   const [showReferences, setShowReferences] = useState(true)
@@ -284,6 +289,11 @@ export function EnvironmentalDashboard({ regionName, onClose, showCloseButton = 
         <div>
           <h2 className="text-3xl font-bold">Environmental Analysis</h2>
           <p className="text-muted-foreground mt-1">{regionName}</p>
+          {analysisData && analysisData.greenAreas.length > 0 && (
+            <Badge variant="secondary" className="mt-2">
+              ✓ Real Analysis Data ({analysisData.greenAreas.length} similar regions found)
+            </Badge>
+          )}
         </div>
         <div className="flex items-center space-x-2">
           <Button variant="outline" size="sm">
