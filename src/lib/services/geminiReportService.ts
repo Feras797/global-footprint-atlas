@@ -16,26 +16,88 @@ export class GeminiReportService {
     reportData: ReportData,
     request: ReportRequest
   ): Promise<ReportResponse> {
+    console.log('🚀 Starting Gemini report generation...', {
+      reportType: request.reportType,
+      companyName: reportData.company.name,
+      redAreas: reportData.redAreas.length,
+      greenAreas: reportData.greenAreas.length
+    });
+    
     try {
       // Generate the prompt for Gemini
+      console.log('📝 Creating Gemini prompt...');
       const prompt = this.createGeminiPrompt(reportData, request);
+      console.log('✅ Prompt created successfully', {
+        systemPromptLength: prompt.systemPrompt.length,
+        dataContextLength: prompt.dataContext.length,
+        analysisInstructionsLength: prompt.analysisInstructions.length
+      });
       
       // Call Vertex AI Gemini 2.5 Pro
+      console.log('🤖 Calling Gemini API...');
       const geminiResponse = await this.callVertexAI(prompt);
+      console.log('✅ Gemini API call completed successfully');
+      
+      // Save a summary debug file that links everything together
+      const summaryDebugData = {
+        timestamp: new Date().toISOString(),
+        reportGeneration: {
+          reportId: this.generateReportId(),
+          companyName: reportData.company.name,
+          reportType: request.reportType,
+          redAreasCount: reportData.redAreas.length,
+          greenAreasCount: reportData.greenAreas.length
+        },
+        files: {
+          request: `gemini-debug-request-${new Date().toISOString().replace(/[:.]/g, '-')}.json`,
+          response: `gemini-debug-response-${new Date().toISOString().replace(/[:.]/g, '-')}.json`,
+          finalResult: `gemini-debug-final-result-${new Date().toISOString().replace(/[:.]/g, '-')}.json`,
+          summary: `gemini-debug-summary-${new Date().toISOString().replace(/[:.]/g, '-')}.json`
+        },
+        geminiResponse: {
+          hasContent: !!geminiResponse.content,
+          contentLength: geminiResponse.content?.length || 0,
+          confidence: geminiResponse.confidence,
+          processingTime: geminiResponse.processingTime
+        }
+      };
+      
+      await this.saveDebugData('summary', summaryDebugData);
       
       // Process the response and generate PDF
       const reportId = this.generateReportId();
+      console.log('📄 Generating PDF with report ID:', reportId);
       const pdfUrl = await this.generatePDF(geminiResponse, reportData, request);
+      console.log('✅ PDF generated successfully:', pdfUrl);
       
-      return {
+      const finalResponse = {
         reportId,
-        status: 'completed',
+        status: 'completed' as const,
         downloadUrl: pdfUrl,
         preview: geminiResponse.summary || geminiResponse.content.substring(0, 500)
       };
       
+      console.log('🎉 Report generation completed successfully:', {
+        reportId: finalResponse.reportId,
+        status: finalResponse.status,
+        previewLength: finalResponse.preview.length,
+        downloadUrl: finalResponse.downloadUrl
+      });
+      
+      return finalResponse;
+      
     } catch (error) {
-      console.error('Report generation failed:', error);
+      console.error('❌ Report generation failed:', error);
+      console.error('📊 Error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        reportData: {
+          companyName: reportData.company.name,
+          redAreasCount: reportData.redAreas.length,
+          greenAreasCount: reportData.greenAreas.length
+        }
+      });
+      
       return {
         reportId: this.generateReportId(),
         status: 'failed',
@@ -214,6 +276,34 @@ Use clear headings, bullet points, and data tables where appropriate. Maintain a
   }
 
   /**
+   * Save data to JSON file for debugging
+   */
+  private static async saveDebugData(filename: string, data: any): Promise<void> {
+    try {
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const debugFilename = `gemini-debug-${filename}-${timestamp}.json`;
+      
+      // Create a downloadable JSON file
+      const jsonString = JSON.stringify(data, null, 2);
+      const blob = new Blob([jsonString], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      
+      // Create a temporary download link
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = debugFilename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      console.log(`📁 Debug data saved to: ${debugFilename}`);
+    } catch (error) {
+      console.error('❌ Failed to save debug data:', error);
+    }
+  }
+
+  /**
    * Call Vertex AI Gemini 2.5 Pro API
    */
   private static async callVertexAI(prompt: GeminiReportPrompt): Promise<any> {
@@ -245,53 +335,124 @@ ${prompt.outputFormat}
       }
     };
 
-    console.log('Vertex AI API call payload:', apiPayload);
+    console.log('🤖 Gemini API Request - Vertex AI payload:', apiPayload);
 
     // Real Gemini API call through Firebase Functions (falls back to local for dev)
     const apiUrl = process.env.NODE_ENV === 'production' 
       ? '/api/gemini'  // Firebase Functions endpoint
       : 'http://localhost:3001/api/gemini'; // Local development
     
+    console.log('🔗 Making Gemini API request to:', apiUrl);
+    
+    const requestPayload = {
+      contents: [{
+        role: 'user',
+        parts: [{
+          text: fullPrompt
+        }]
+      }],
+      generationConfig: {
+        temperature: 0.1,
+        maxOutputTokens: 8192,
+        topP: 0.8,
+        topK: 40
+      }
+    };
+    
+    console.log('📤 Gemini Request Payload:', {
+      contentLength: fullPrompt.length,
+      generationConfig: requestPayload.generationConfig,
+      apiUrl
+    });
+    
+    // Save the complete request data to JSON file
+    const requestDebugData = {
+      timestamp: new Date().toISOString(),
+      apiUrl,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      fullPrompt: fullPrompt,
+      promptStructure: {
+        systemPromptLength: prompt.systemPrompt.length,
+        dataContextLength: prompt.dataContext.length,
+        analysisInstructionsLength: prompt.analysisInstructions.length,
+        visualizationRequirementsLength: prompt.visualizationRequirements.length,
+        outputFormatLength: prompt.outputFormat.length
+      },
+      requestPayload: requestPayload
+    };
+    
+    await this.saveDebugData('request', requestDebugData);
+    
     const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({
-        contents: [{
-          role: 'user',
-          parts: [{
-            text: fullPrompt
-          }]
-        }],
-        generationConfig: {
-          temperature: 0.1,
-          maxOutputTokens: 8192,
-          topP: 0.8,
-          topK: 40
-        }
-      })
+      body: JSON.stringify(requestPayload)
     });
 
+    console.log('📡 Gemini API Response Status:', response.status, response.statusText);
+
     if (!response.ok) {
+      console.error('❌ Gemini API request failed:', {
+        status: response.status,
+        statusText: response.statusText,
+        url: apiUrl
+      });
       throw new Error(`Gemini API request failed: ${response.status} ${response.statusText}`);
     }
 
     const data = await response.json();
+    console.log('📥 Raw Gemini API Response received - saving to file...');
+    
+    // Save the complete response data to JSON file
+    const responseDebugData = {
+      timestamp: new Date().toISOString(),
+      responseStatus: response.status,
+      responseStatusText: response.statusText,
+      responseHeaders: Object.fromEntries(response.headers.entries()),
+      rawResponse: data,
+      extractedContent: data.candidates?.[0]?.content?.parts?.[0]?.text || '',
+      contentLength: (data.candidates?.[0]?.content?.parts?.[0]?.text || '').length
+    };
+    
+    await this.saveDebugData('response', responseDebugData);
     
     if (data.error) {
+      console.error('❌ Gemini API returned error:', data.error);
       throw new Error(`Gemini API error: ${data.error.message}`);
     }
 
     // Extract the generated content
     const generatedText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
     
-    return {
+    const result = {
       content: generatedText,
       summary: generatedText.substring(0, 500) + '...',
       confidence: 0.95,
       processingTime: 2.3
     };
+    
+    // Save the final processed result to JSON file
+    const finalResultDebugData = {
+      timestamp: new Date().toISOString(),
+      result: result,
+      contentStats: {
+        contentLength: result.content.length,
+        summaryLength: result.summary.length,
+        confidence: result.confidence,
+        processingTime: result.processingTime
+      },
+      contentPreview: generatedText.substring(0, 500) + '...'
+    };
+    
+    await this.saveDebugData('final-result', finalResultDebugData);
+    console.log('✅ Gemini API processing complete - all debug data saved to JSON files');
+    
+    return result;
   }
 
   /**
@@ -302,12 +463,28 @@ ${prompt.outputFormat}
     reportData: ReportData,
     request: ReportRequest
   ): Promise<string> {
+    console.log('📄 Starting PDF generation...');
+    console.log('📊 Input data for PDF:', {
+      hasGeminiResponse: !!geminiResponse,
+      geminiResponseType: typeof geminiResponse,
+      geminiKeys: geminiResponse ? Object.keys(geminiResponse) : [],
+      reportDataCompany: reportData.company.name,
+      requestType: request.reportType
+    });
+    
     try {
       const jsPDF = (await import('jspdf')).default;
+      console.log('✅ jsPDF library loaded successfully');
       
       const reportContent = geminiResponse.candidates?.[0]?.content?.parts?.[0]?.text || 
                            geminiResponse.content || 
                            'Report content not available';
+                           
+      console.log('📝 Extracted report content:', {
+        contentLength: reportContent.length,
+        hasContent: !!reportContent,
+        contentPreview: reportContent.substring(0, 100) + '...'
+      });
       
       const pdf = new jsPDF({
         orientation: 'portrait',
@@ -703,13 +880,26 @@ ${prompt.outputFormat}
       }
       
       const fileName = `${reportData.company.name.replace(/[^a-zA-Z0-9]/g, '_')}_Environmental_Report_${new Date().toISOString().split('T')[0]}.pdf`;
+      console.log('💾 Saving PDF with filename:', fileName);
       pdf.save(fileName);
       
-      console.log('📄 Enhanced multi-page PDF generated:', fileName);
+      console.log('🎉 PDF generation completed successfully!', {
+        fileName,
+        totalPages: pdf.getNumberOfPages(),
+        companyName: reportData.company.name,
+        reportType: request.reportType
+      });
+      
       return `downloaded://${fileName}`;
       
     } catch (error) {
-      console.error('PDF generation failed:', error);
+      console.error('❌ PDF generation failed:', error);
+      console.error('📊 PDF Error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        companyName: reportData.company.name,
+        geminiResponseType: typeof geminiResponse
+      });
       throw new Error(`Failed to generate PDF report: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }

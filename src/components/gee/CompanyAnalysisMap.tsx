@@ -4,6 +4,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
 import { AlertCircle, Loader2, MapPin } from 'lucide-react';
 
 // Google Maps API key
@@ -23,6 +24,7 @@ interface AnalysisMapProps {
   locations: CompanyLocation[];
   className?: string;
   onAnalysisComplete?: (redAreas: any[], greenAreas: any[]) => void;
+  onAnalysisPerformed?: () => void;
 }
 
 interface SimilarArea {
@@ -31,6 +33,7 @@ interface SimilarArea {
   rank: number;
   index: number;
   position: string;
+  belongsToRedBox: number; // Index of the red box this green area belongs to
   features: {
     ndvi_mean: number;
     ndvi_std: number;
@@ -119,9 +122,9 @@ const buildSimilarityApiUrl = (coordinates: [number, number, number, number]): s
 /**
  * Parse real API response and convert to internal SimilarArea format
  */
-const parseRealApiResponse = (apiResponse: RealApiResponse): SimilarArea[] => {
+const parseRealApiResponse = (apiResponse: RealApiResponse, redBoxIndex: number): SimilarArea[] => {
   return apiResponse.top_matches.map(match => {
-    console.log(`🔄 Converting Rank ${match.rank}:`, {
+    console.log(`🔄 Converting Rank ${match.rank} for Red Box ${redBoxIndex}:`, {
       position: match.position,
       bbox: match.bbox,
       similarity: match.similarity,
@@ -134,6 +137,7 @@ const parseRealApiResponse = (apiResponse: RealApiResponse): SimilarArea[] => {
       rank: match.rank,
       index: match.index,
       position: match.position,
+      belongsToRedBox: redBoxIndex,
       features: match.features
     };
   });
@@ -144,7 +148,8 @@ export const CompanyAnalysisMap: React.FC<AnalysisMapProps> = ({
   companyName,
   locations,
   className = '',
-  onAnalysisComplete
+  onAnalysisComplete,
+  onAnalysisPerformed
 }) => {
   // Refs
   const mapContainer = useRef<HTMLDivElement>(null);
@@ -162,6 +167,7 @@ export const CompanyAnalysisMap: React.FC<AnalysisMapProps> = ({
     type: 'company' | 'similar';
     data: any;
   } | null>(null);
+  const [selectedRedBoxIndex, setSelectedRedBoxIndex] = useState<number | null>(null);
 
   /**
    * Initialize Google Maps
@@ -217,11 +223,12 @@ export const CompanyAnalysisMap: React.FC<AnalysisMapProps> = ({
     setTotalApiRequests(locations.length);
     setApiRequestsCompleted(0);
     setIsAnalysisEnabled(false); // Reset analysis button
+    setSimilarAreas([]); // Clear previous green areas
     
     const newRectangles: google.maps.Rectangle[] = [];
 
-    for (const location of locations) {
-      // Use the rectangular coordinates directly from mockdata
+    // Create all red rectangles first
+    locations.forEach((location, locationIndex) => {
       const [tlx, tly, brx, bry] = location.coordinates;
       
       const bounds = {
@@ -245,13 +252,14 @@ export const CompanyAnalysisMap: React.FC<AnalysisMapProps> = ({
       rectangle.setMap(mapInstance.current);
       newRectangles.push(rectangle);
 
-      // Add click handler with location info
+      // Add click handler with location info and red box tracking
       rectangle.addListener('click', () => {
-        console.log('🔴 Clicked company location:', location.name);
+        console.log('🔴 Clicked company location:', location.name, 'Index:', locationIndex);
         setSelectedArea({
           type: 'company',
-          data: location
+          data: { ...location, redBoxIndex: locationIndex }
         });
+        setSelectedRedBoxIndex(locationIndex);
       });
 
       // Add hover effects
@@ -262,21 +270,31 @@ export const CompanyAnalysisMap: React.FC<AnalysisMapProps> = ({
       rectangle.addListener('mouseout', () => {
         rectangle.setOptions({ fillOpacity: 0.3, strokeWeight: 3 });
       });
-
-      // Make API call for similar areas using the location's coordinates
-      await fetchSimilarAreas([tlx, tly, brx, bry]); // [tlx, tly, brx, bry]
-    }
+    });
 
     setRectangles(newRectangles);
+
+    // Make concurrent API calls for all locations
+    console.log('🚀 Starting concurrent API calls for all red boxes...');
+    const apiPromises = locations.map((location, locationIndex) => 
+      fetchSimilarAreas([...location.coordinates], locationIndex)
+    );
+
+    // Don't await all - let them complete individually and update UI progressively
+    apiPromises.forEach((promise, index) => {
+      promise.catch(error => {
+        console.error(`❌ API call failed for location ${index}:`, error);
+      });
+    });
   };
 
   /**
    * Fetch similar areas from real similarity API
    */
-  const fetchSimilarAreas = async (coordinates: [number, number, number, number]) => {
+  const fetchSimilarAreas = async (coordinates: [number, number, number, number], redBoxIndex: number) => {
     try {
       const apiUrl = buildSimilarityApiUrl(coordinates);
-      console.log('📡 Requesting similar areas for coordinates:', coordinates);
+      console.log(`📡 Requesting similar areas for Red Box ${redBoxIndex}, coordinates:`, coordinates);
       console.log('🔗 Using real API URL:', apiUrl);
       
       const response = await fetch(apiUrl, {
@@ -284,14 +302,14 @@ export const CompanyAnalysisMap: React.FC<AnalysisMapProps> = ({
         // No additional headers needed for GET request
       });
 
-      console.log('📡 Response status:', response.status, response.statusText);
+      console.log(`📡 Response status for Red Box ${redBoxIndex}:`, response.status, response.statusText);
 
       if (!response.ok) {
         throw new Error(`API request failed: ${response.status} ${response.statusText}`);
       }
 
       const data = await response.json();
-      console.log('📥 Raw API response:', data);
+      console.log(`📥 Raw API response for Red Box ${redBoxIndex}:`, data);
       console.log('📊 Response status:', data.status);
       console.log('📊 Top matches count:', data.top_matches ? data.top_matches.length : 'undefined');
       
@@ -299,10 +317,10 @@ export const CompanyAnalysisMap: React.FC<AnalysisMapProps> = ({
       
       // Check if it's the real API format
       if (data.status === 'success' && data.top_matches && Array.isArray(data.top_matches)) {
-        console.log('🔄 Processing real API format with top_matches');
+        console.log(`🔄 Processing real API format with top_matches for Red Box ${redBoxIndex}`);
         try {
-          newSimilarAreas = parseRealApiResponse(data as RealApiResponse);
-          console.log('✅ Successfully parsed', newSimilarAreas.length, 'similar areas');
+          newSimilarAreas = parseRealApiResponse(data as RealApiResponse, redBoxIndex);
+          console.log(`✅ Successfully parsed ${newSimilarAreas.length} similar areas for Red Box ${redBoxIndex}`);
         } catch (parseError) {
           console.error('❌ Error during parsing:', parseError);
           throw parseError;
@@ -312,16 +330,24 @@ export const CompanyAnalysisMap: React.FC<AnalysisMapProps> = ({
         throw new Error(`Unrecognized API response format. Expected 'status: success' and 'top_matches' array.`);
       }
 
-      console.log('✅ Parsed similar areas:', newSimilarAreas);
-      console.log('🟢 API call successful - received', newSimilarAreas.length, 'green areas');
+      console.log(`✅ Parsed similar areas for Red Box ${redBoxIndex}:`, newSimilarAreas);
+      console.log(`🟢 API call successful - received ${newSimilarAreas.length} green areas for Red Box ${redBoxIndex}`);
+      
       setSimilarAreas(prev => {
         const updated = [...prev, ...newSimilarAreas];
         console.log('📈 Total similar areas now:', updated.length);
+        
+        // Enable analysis button as soon as we have first green areas
+        if (prev.length === 0 && newSimilarAreas.length > 0) {
+          console.log('🎯 First green areas received - enabling analysis button early!');
+          setIsAnalysisEnabled(true);
+        }
+        
         return updated;
       });
       
     } catch (error) {
-      console.error('❌ Real API request failed:', error);
+      console.error(`❌ Real API request failed for Red Box ${redBoxIndex}:`, error);
       
       // Enhanced error logging for different types of failures
       if (error instanceof TypeError) {
@@ -331,16 +357,12 @@ export const CompanyAnalysisMap: React.FC<AnalysisMapProps> = ({
         console.error('📄 Error details:', error.message);
       }
       
-      console.log('❌ No green boxes will be shown - real API unavailable');
+      console.log(`❌ No green boxes will be shown for Red Box ${redBoxIndex} - real API unavailable`);
       // No fallback to mock data - real API only
     } finally {
       setApiRequestsCompleted(prev => {
         const newCount = prev + 1;
         console.log(`🔢 API requests: ${newCount}/${totalApiRequests} completed`);
-        if (newCount === totalApiRequests) {
-          console.log('✅ All API requests completed - enabling analysis button');
-          setIsAnalysisEnabled(true);
-        }
         return newCount;
       });
     }
@@ -348,7 +370,7 @@ export const CompanyAnalysisMap: React.FC<AnalysisMapProps> = ({
 
 
   /**
-   * Plot green squares for similar areas
+   * Plot green squares for similar areas with color coding
    */
   const plotGreenSquares = () => {
     if (!mapInstance.current) return;
@@ -362,6 +384,11 @@ export const CompanyAnalysisMap: React.FC<AnalysisMapProps> = ({
     similarAreas.forEach((area, index) => {
       const [minLng, minLat, maxLng, maxLat] = area.bbox;
       
+      // Color coding: yellowish for selected red box's green areas, regular green for others
+      const isFromSelectedRedBox = selectedRedBoxIndex !== null && area.belongsToRedBox === selectedRedBoxIndex;
+      const fillColor = isFromSelectedRedBox ? '#eab308' : '#22c55e'; // Yellow vs Green
+      const strokeColor = isFromSelectedRedBox ? '#ca8a04' : '#16a34a'; // Darker yellow vs Darker green
+      
       const rectangle = new google.maps.Rectangle({
         bounds: {
           north: maxLat,
@@ -369,9 +396,9 @@ export const CompanyAnalysisMap: React.FC<AnalysisMapProps> = ({
           east: maxLng,
           west: minLng
         },
-        fillColor: '#22c55e',
+        fillColor,
         fillOpacity: 0.3,
-        strokeColor: '#16a34a',
+        strokeColor,
         strokeOpacity: 0.8,
         strokeWeight: 3,
         clickable: true,
@@ -382,7 +409,7 @@ export const CompanyAnalysisMap: React.FC<AnalysisMapProps> = ({
 
       // Add click handler with enhanced info
       rectangle.addListener('click', () => {
-        console.log(`🟢 Clicked similar area: Position ${area.position} (Rank ${area.rank}), similarity: ${(area.similarity * 100).toFixed(1)}%`);
+        console.log(`🟢 Clicked similar area: Position ${area.position} (Rank ${area.rank}) from Red Box ${area.belongsToRedBox}, similarity: ${(area.similarity * 100).toFixed(1)}%`);
         console.log('📊 Environmental features:', area.features);
         setSelectedArea({
           type: 'similar',
@@ -424,11 +451,11 @@ export const CompanyAnalysisMap: React.FC<AnalysisMapProps> = ({
 
   // Plot green squares when similar areas are updated
   useEffect(() => {
-    if (similarAreas.length > 0 && apiRequestsCompleted === totalApiRequests) {
+    if (similarAreas.length > 0) {
       plotGreenSquares();
       
       // Notify parent component that analysis is complete (only once)
-      if (onAnalysisComplete && !hasNotifiedCompletion) {
+      if (onAnalysisComplete && !hasNotifiedCompletion && apiRequestsCompleted === totalApiRequests) {
         const redAreasData = locations.map((location, index) => ({
           ...location,
           environmentalData: null // Company areas don't have environmental features yet
@@ -447,7 +474,7 @@ export const CompanyAnalysisMap: React.FC<AnalysisMapProps> = ({
         setHasNotifiedCompletion(true);
       }
     }
-  }, [similarAreas, apiRequestsCompleted, totalApiRequests, onAnalysisComplete, locations, hasNotifiedCompletion]);
+  }, [similarAreas, selectedRedBoxIndex, apiRequestsCompleted, totalApiRequests, onAnalysisComplete, locations, hasNotifiedCompletion]);
 
   const handlePerformAnalysis = () => {
     console.log('🔬 Performing detailed analysis for all areas...');
@@ -471,6 +498,11 @@ export const CompanyAnalysisMap: React.FC<AnalysisMapProps> = ({
       ndvi: area.features.ndvi_mean.toFixed(3),
       elevation: `${area.features.elevation_mean.toFixed(1)}m`
     })));
+    
+    // Call the callback to notify parent that analysis was performed
+    if (onAnalysisPerformed) {
+      onAnalysisPerformed();
+    }
     
     // This will trigger the detailed analysis API call later
     // For now, just show that the analysis is ready
@@ -537,13 +569,22 @@ export const CompanyAnalysisMap: React.FC<AnalysisMapProps> = ({
 
             {/* API Progress Display */}
             {!isLoading && totalApiRequests > 0 && apiRequestsCompleted < totalApiRequests && (
-              <div className="absolute top-4 left-4">
-                <Card className="p-3 bg-background/90 backdrop-blur-sm">
-                  <div className="flex items-center space-x-2">
-                    <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                    <span className="text-sm">
-                      Finding similar areas... {apiRequestsCompleted}/{totalApiRequests}
-                    </span>
+              <div className="absolute top-4 left-4 right-4">
+                <Card className="p-4 bg-background/90 backdrop-blur-sm">
+                  <div className="space-y-3">
+                    <div className="flex items-center space-x-2">
+                      <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                      <span className="text-sm font-medium">
+                        Finding similar areas... {apiRequestsCompleted}/{totalApiRequests}
+                      </span>
+                    </div>
+                    <Progress 
+                      value={(apiRequestsCompleted / totalApiRequests) * 100} 
+                      className="w-full h-2" 
+                    />
+                    <div className="text-xs text-muted-foreground">
+                      {similarAreas.length} green areas found so far
+                    </div>
                   </div>
                 </Card>
               </div>
@@ -572,6 +613,12 @@ export const CompanyAnalysisMap: React.FC<AnalysisMapProps> = ({
                     <div className="flex justify-between items-center">
                       <span className="text-sm font-medium">Rank:</span>
                       <Badge variant="secondary">#{selectedArea.data.rank}</Badge>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium">Similar to:</span>
+                      <Badge variant="outline" className="text-xs">
+                        Red Box {selectedArea.data.belongsToRedBox + 1}
+                      </Badge>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-sm font-medium">Similarity:</span>

@@ -4,6 +4,7 @@ import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { ArrowLeft, Download, Share2, Satellite, MapPin, Building2, FileText, Brain } from 'lucide-react'
 
 import { getCompanyById, Company } from '@/lib/companies'
@@ -18,10 +19,19 @@ export default function CompanyPage() {
     redAreas: any[];
     greenAreas: any[];
   }>({ redAreas: [], greenAreas: [] })
+  const [analysisCompleted, setAnalysisCompleted] = useState(false)
   
   // Load company using unified system
   const company = useMemo(() => getCompanyById(companyId), [companyId])
   const navigate = useNavigate()
+
+  // Reset analysis state when company changes
+  useMemo(() => {
+    console.log('🔄 Company changed, resetting analysis state for:', companyId);
+    setAnalysisCompleted(false);
+    setActiveTab('analysis'); // Force back to analysis tab
+    setAnalysisData({ redAreas: [], greenAreas: [] });
+  }, [companyId]);
 
   // Convert company places to location format for the map
   const companyLocations = useMemo(() => {
@@ -149,14 +159,33 @@ export default function CompanyPage() {
           
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
             <TabsList className="grid w-full grid-cols-2">
+              {/* Debug info - remove in production */}
+              <div className="absolute -top-8 left-0 text-xs text-muted-foreground">
+                Debug: analysisCompleted = {analysisCompleted ? 'true' : 'false'}
+              </div>
               <TabsTrigger value="analysis" className="flex items-center gap-2">
                 <Satellite className="h-4 w-4" />
                 Satellite Analysis
               </TabsTrigger>
-              <TabsTrigger value="reports" className="flex items-center gap-2">
-                <Brain className="h-4 w-4" />
-                AI Reports
-              </TabsTrigger>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <TabsTrigger 
+                      value="reports" 
+                      disabled={!analysisCompleted}
+                      className="flex items-center gap-2"
+                    >
+                      <Brain className="h-4 w-4" />
+                      AI Reports
+                    </TabsTrigger>
+                  </TooltipTrigger>
+                  {!analysisCompleted && (
+                    <TooltipContent>
+                      <p>Complete satellite analysis first</p>
+                    </TooltipContent>
+                  )}
+                </Tooltip>
+              </TooltipProvider>
             </TabsList>
 
             <TabsContent value="analysis" className="space-y-6">
@@ -174,6 +203,12 @@ export default function CompanyPage() {
                 className="max-w-6xl mx-auto"
                 onAnalysisComplete={(redAreas: any[], greenAreas: any[]) => {
                   setAnalysisData({ redAreas, greenAreas });
+                  // Don't set analysisCompleted here - this just means green areas were fetched
+                }}
+                onAnalysisPerformed={() => {
+                  // This should be called when "Perform Analysis" button is actually clicked
+                  console.log('🎯 Analysis performed - enabling AI Reports tab');
+                  setAnalysisCompleted(true);
                 }}
               />
             </TabsContent>
