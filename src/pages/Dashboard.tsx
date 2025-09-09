@@ -4,7 +4,8 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { Sidebar } from "@/components/Sidebar";
 import { CompanyList } from "@/components/CompanyList";
 import { DashboardMap } from "@/components/DashboardMap";
-import { CesiumGlobe } from "@/components/CesiumGlobe";
+import { MapLibre3DGlobe } from "@/components/MapLibre3DGlobe";
+import { SimpleMapLibreGlobe } from "@/components/SimpleMapLibreGlobe";
 import { RegionAnalyzer } from "@/components/RegionAnalyzer";
 import { CompanyReport } from "@/components/CompanyReport";
 import { Card } from "@/components/ui/card";
@@ -39,7 +40,7 @@ const Dashboard = () => {
 
   // Removed GEE Analysis state - using simplified approach
 
-  // Convert our unified companies to format CesiumGlobe expects
+  // Convert our unified companies to format MapLibre3DGlobe expects
   const globeCompanies: CompanyData[] = companiesData.map(company => ({
     company: company.name,
     Industry: company.industry,
@@ -100,7 +101,7 @@ const Dashboard = () => {
                   </Badge>
                 </div>
                 <div className="h-96">
-                  <CesiumGlobe 
+                  <SimpleMapLibreGlobe 
                     companies={globeCompanies}
                     onEntitySelect={setSelectedGlobeEntity}
                     showControls={true}
