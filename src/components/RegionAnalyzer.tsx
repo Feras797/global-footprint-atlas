@@ -40,11 +40,18 @@ export const RegionAnalyzer = () => {
     if (savedRegions) {
       try {
         const parsed = JSON.parse(savedRegions);
-        // Convert date strings back to Date objects
-        return parsed.map((r: any) => ({
-          ...r,
+        // Convert date strings back to Date objects and ensure all fields are preserved
+        const loadedRegions = parsed.map((r: any) => ({
+          id: r.id,
+          name: r.name,
+          coordinates: r.coordinates,
+          rectangleCoordinates: r.rectangleCoordinates, // Explicitly preserve rectangle coordinates
+          area: r.area,
+          type: r.type,
+          description: r.description,
           createdAt: new Date(r.createdAt)
         }));
+        return loadedRegions;
       } catch (e) {
         console.error('Failed to parse saved regions:', e);
       }
@@ -58,7 +65,8 @@ export const RegionAnalyzer = () => {
         area: 15420,
         type: 'forest',
         description: 'Deforestation monitoring region in the central Amazon',
-        createdAt: new Date('2024-01-15')
+        createdAt: new Date('2024-01-15'),
+        rectangleCoordinates: undefined
       },
       {
         id: '2', 
@@ -67,7 +75,8 @@ export const RegionAnalyzer = () => {
         area: 8760,
         type: 'agricultural',
         description: 'Water usage and soil health analysis in Central Valley',
-        createdAt: new Date('2024-02-20')
+        createdAt: new Date('2024-02-20'),
+        rectangleCoordinates: undefined
       }
     ];
   });
