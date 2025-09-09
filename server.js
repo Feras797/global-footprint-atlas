@@ -27,8 +27,8 @@ app.post('/api/gemini', async (req, res) => {
     
     console.log('🔑 Got access token');
     
-    // Make request to Gemini 1.5 Pro (premium model)
-    const response = await fetch('https://europe-west3-aiplatform.googleapis.com/v1/projects/tum-cdtm25mun-8787/locations/europe-west3/publishers/google/models/gemini-1.5-pro:generateContent', {
+    // Make request to Gemini 2.5 Pro (latest model)
+    const response = await fetch('https://europe-west1-aiplatform.googleapis.com/v1/projects/tum-cdtm25mun-8787/locations/europe-west1/publishers/google/models/gemini-2.5-pro:generateContent', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${accessToken}`,
