@@ -168,6 +168,8 @@ export const CompanyAnalysisMap: React.FC<AnalysisMapProps> = ({
     data: any;
   } | null>(null);
   const [selectedRedBoxIndex, setSelectedRedBoxIndex] = useState<number | null>(null);
+  const [batchAnalysisData, setBatchAnalysisData] = useState<any>(null);
+  const [isAnalysisInProgress, setIsAnalysisInProgress] = useState(false);
 
   /**
    * Initialize Google Maps
@@ -476,37 +478,126 @@ export const CompanyAnalysisMap: React.FC<AnalysisMapProps> = ({
     }
   }, [similarAreas, selectedRedBoxIndex, apiRequestsCompleted, totalApiRequests, onAnalysisComplete, locations, hasNotifiedCompletion]);
 
-  const handlePerformAnalysis = () => {
-    console.log('🔬 Performing detailed analysis for all areas...');
+  const handlePerformAnalysis = async () => {
+    console.log('🔬 Performing comprehensive batch analysis...');
     console.log('📊 Analysis data:', {
       redAreas: locations.length,
       greenAreas: similarAreas.length,
       totalAreas: locations.length + similarAreas.length
     });
     
-    // Log the areas for verification
-    console.log('🔴 Company areas:', locations.map(loc => ({
-      name: loc.name,
-      coordinates: loc.coordinates
-    })));
-    
-    console.log('🟢 Similar areas:', similarAreas.map(area => ({
-      position: area.position,
-      rank: area.rank,
-      similarity: `${(area.similarity * 100).toFixed(1)}%`,
-      bbox: area.bbox,
-      ndvi: area.features.ndvi_mean.toFixed(3),
-      elevation: `${area.features.elevation_mean.toFixed(1)}m`
-    })));
-    
-    // Call the callback to notify parent that analysis was performed
-    if (onAnalysisPerformed) {
-      onAnalysisPerformed();
+    try {
+      setIsAnalysisInProgress(true);
+      console.log('📡 Calling real industrial analysis API...');
+      
+      // We need to make separate requests for each red area with its 3 greens
+      const allBatchResults = [];
+      
+      for (let i = 0; i < locations.length; i++) {
+        const redArea = locations[i];
+        // Get 3 green areas for this red area (filter by belongsToRedBox)
+        const greenAreasForThisRed = similarAreas.filter(green => green.belongsToRedBox === i);
+        
+        if (greenAreasForThisRed.length !== 3) {
+          console.warn(`⚠️ Red area ${i} has ${greenAreasForThisRed.length} green areas, expected 3`);
+        }
+        
+        // Transform coordinates: [tlx, tly, brx, bry] -> [minLon, minLat, maxLon, maxLat]
+        const rectangles = [];
+        const rectangle_names = [];
+        
+        // Add red area (company location)
+        const [tlx, tly, brx, bry] = redArea.coordinates;
+        const minLon = Math.min(tlx, brx);
+        const maxLon = Math.max(tlx, brx);
+        const minLat = Math.min(tly, bry);
+        const maxLat = Math.max(tly, bry);
+        
+        rectangles.push([minLon, minLat, maxLon, maxLat]);
+        rectangle_names.push(redArea.name);
+        
+        // Add green areas (similar areas)
+        greenAreasForThisRed.forEach((green, index) => {
+          const [minLng, minLat, maxLng, maxLat] = green.bbox;
+          rectangles.push([minLng, minLat, maxLng, maxLat]);
+          rectangle_names.push(`Similar_Area_${index + 1}`);
+        });
+        
+        console.log(`📊 Request ${i + 1}/${locations.length}:`, {
+          rectangles,
+          rectangle_names
+        });
+        
+        const requestPayload = {
+          rectangles,
+          rectangle_names,
+          start_date: "2022-01-01",
+          end_date: "2023-12-31",
+          temporal_resolution: "quarterly",
+          thresholds: {
+            vegetation_loss: -0.2,
+            dust_level: 0.15,
+            thermal_anomaly: 50,
+            soil_exposure: 0.3,
+            night_light_increase: 0.5
+          }
+        };
+        
+        const response = await fetch('https://weather-370308594166.europe-west1.run.app/analysis/industrial', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(requestPayload)
+        });
+        
+        if (!response.ok) {
+          throw new Error(`API request ${i + 1} failed: ${response.status} ${response.statusText}`);
+        }
+        
+        const batchResult = await response.json();
+        console.log(`✅ Request ${i + 1} response:`, batchResult);
+        allBatchResults.push(batchResult);
+      }
+      
+      // Combine all batch results
+      const combinedAnalysisData = {
+        status: "success",
+        timestamp: new Date().toISOString(),
+        total_requests: allBatchResults.length,
+        batch_results: allBatchResults,
+        combined_summary: {
+          total_areas_analyzed: allBatchResults.reduce((sum, result) => sum + (result.summary?.areas_analyzed || 0), 0),
+          total_periods: allBatchResults[0]?.summary?.total_periods_analyzed || 8,
+          total_anomalies: allBatchResults.reduce((sum, result) => sum + (result.anomaly_summary?.total_anomalies || 0), 0),
+          total_requests: allBatchResults.length
+        }
+      };
+      
+      console.log('✅ All batch analysis requests completed:', combinedAnalysisData);
+      
+      // Store the comprehensive analysis data
+      setBatchAnalysisData(combinedAnalysisData);
+      
+      // Call the callback to notify parent that analysis was performed
+      if (onAnalysisPerformed) {
+        onAnalysisPerformed();
+      }
+      
+      // Show success message with key metrics
+      alert(`🎉 Real API Analysis Complete!\n\n` +
+            `📊 Requests Made: ${combinedAnalysisData.total_requests}\n` +
+            `📊 Total Areas: ${combinedAnalysisData.combined_summary.total_areas_analyzed}\n` +
+            `📈 Time Periods: ${combinedAnalysisData.combined_summary.total_periods} quarters\n` +
+            `🚨 Total Anomalies: ${combinedAnalysisData.combined_summary.total_anomalies}\n\n` +
+            `Real environmental data loaded successfully!`);
+      
+    } catch (error) {
+      console.error('❌ Batch analysis failed:', error);
+      alert(`❌ Analysis Failed\n\nError: ${error.message}\n\nPlease try again or check the server connection.`);
+    } finally {
+      setIsAnalysisInProgress(false);
     }
-    
-    // This will trigger the detailed analysis API call later
-    // For now, just show that the analysis is ready
-    alert(`Analysis ready!\n\nCompany Areas: ${locations.length}\nSimilar Areas: ${similarAreas.length}\n\nReady to proceed with detailed environmental analysis.`);
   };
 
 
@@ -711,11 +802,16 @@ export const CompanyAnalysisMap: React.FC<AnalysisMapProps> = ({
       <div className="flex justify-center">
         <Button 
           onClick={handlePerformAnalysis}
-          disabled={!isAnalysisEnabled}
+          disabled={!isAnalysisEnabled || isAnalysisInProgress}
           size="lg"
           className="min-w-[200px]"
         >
-          {isAnalysisEnabled ? (
+          {isAnalysisInProgress ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              Analyzing with Real API...
+            </>
+          ) : isAnalysisEnabled ? (
             <>Perform Analysis</>
           ) : (
             <>
