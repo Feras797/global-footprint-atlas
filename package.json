@@ -10,7 +10,11 @@
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "firebase:init": "firebase init",
+    "firebase:emulator": "npm run build && firebase emulators:start",
+    "firebase:deploy": "npm run build && firebase deploy",
+    "firebase:functions:install": "cd functions && npm install"
   },
   "dependencies": {
     "@google-cloud/aiplatform": "^5.6.0",

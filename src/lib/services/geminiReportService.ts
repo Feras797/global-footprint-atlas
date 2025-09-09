@@ -247,8 +247,12 @@ ${prompt.outputFormat}
 
     console.log('Vertex AI API call payload:', apiPayload);
 
-    // Real Gemini API call through our proxy server
-    const response = await fetch('http://localhost:3001/api/gemini', {
+    // Real Gemini API call through Firebase Functions (falls back to local for dev)
+    const apiUrl = process.env.NODE_ENV === 'production' 
+      ? '/api/gemini'  // Firebase Functions endpoint
+      : 'http://localhost:3001/api/gemini'; // Local development
+    
+    const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -291,7 +295,7 @@ ${prompt.outputFormat}
   }
 
   /**
-   * Generate PDF from Gemini analysis using jsPDF and html2canvas
+   * Generate PDF from Gemini analysis using jsPDF with proper pagination
    */
   private static async generatePDF(
     geminiResponse: any,
@@ -301,80 +305,197 @@ ${prompt.outputFormat}
     try {
       // Dynamic imports for client-side PDF generation
       const jsPDF = (await import('jspdf')).default;
-      const html2canvas = (await import('html2canvas')).default;
       
       // Extract content from Gemini response
       const reportContent = geminiResponse.candidates?.[0]?.content?.parts?.[0]?.text || 
                            geminiResponse.content || 
                            'Report content not available';
       
-      // Create a temporary div for PDF generation
-      const tempDiv = document.createElement('div');
-      tempDiv.style.position = 'absolute';
-      tempDiv.style.left = '-9999px';
-      tempDiv.style.top = '-9999px';
-      tempDiv.style.width = '210mm';
-      tempDiv.style.backgroundColor = 'white';
-      
-      // HTML content for PDF
-      const htmlContent = this.createPDFHTML(reportData, request, reportContent);
-      tempDiv.innerHTML = htmlContent;
-      
-      document.body.appendChild(tempDiv);
-      
-      try {
-        // Convert HTML to canvas
-        const canvas = await html2canvas(tempDiv, {
-          scale: 2,
-          useCORS: true,
-          backgroundColor: '#ffffff',
-          logging: false,
-          width: 794, // A4 width in pixels at 96 DPI
-          height: 1123 // A4 height in pixels at 96 DPI
-        });
+      // Create PDF with proper pagination
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      // Set up page dimensions
+      const pageWidth = 210; // A4 width in mm
+      const pageHeight = 297; // A4 height in mm
+      const margin = 20;
+      const contentWidth = pageWidth - (margin * 2);
+      const contentHeight = pageHeight - (margin * 2);
+      let currentY = margin;
+
+      // Add header function
+      const addHeader = (pageNumber: number) => {
+        pdf.setFontSize(24);
+        pdf.setTextColor(14, 165, 233); // Blue color
+        pdf.text('Environmental Impact Report', margin, currentY);
+        currentY += 15;
         
-        // Create PDF
-        const pdf = new jsPDF({
-          orientation: 'portrait',
-          unit: 'mm',
-          format: 'a4'
-        });
+        pdf.setFontSize(18);
+        pdf.setTextColor(55, 65, 81); // Gray color
+        pdf.text(reportData.company.name, margin, currentY);
+        currentY += 10;
         
-        const imgData = canvas.toDataURL('image/png');
-        const imgWidth = 210; // A4 width in mm
-        const pageHeight = 295; // A4 height in mm
-        const imgHeight = (canvas.height * imgWidth) / canvas.width;
-        let heightLeft = imgHeight;
+        pdf.setFontSize(10);
+        pdf.setTextColor(107, 114, 128); // Light gray
+        const currentDate = new Date().toLocaleDateString('en-US');
+        pdf.text(`Generated: ${currentDate} | Page ${pageNumber}`, margin, currentY);
+        currentY += 15;
         
-        let position = 0;
-        
-        // Add first page
-        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
-        
-        // Add additional pages if needed
-        while (heightLeft >= 0) {
-          position = heightLeft - imgHeight;
+        // Add horizontal line
+        pdf.setDrawColor(226, 232, 240);
+        pdf.line(margin, currentY, pageWidth - margin, currentY);
+        currentY += 10;
+      };
+
+      // Add footer function
+      const addFooter = () => {
+        pdf.setFontSize(8);
+        pdf.setTextColor(156, 163, 175);
+        pdf.text('ProtectEarth Environmental Impact Monitoring Platform | Powered by AI & Satellite Data', 
+                margin, pageHeight - 10);
+      };
+
+      // Check if we need a new page
+      const checkNewPage = (requiredSpace: number = 15) => {
+        if (currentY + requiredSpace > pageHeight - 30) {
           pdf.addPage();
-          pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-          heightLeft -= pageHeight;
+          currentY = margin;
+          addHeader(pdf.getNumberOfPages());
+          return true;
         }
+        return false;
+      };
+
+      // Start first page
+      let pageNumber = 1;
+      addHeader(pageNumber);
+
+      // Add key metrics summary
+      pdf.setFontSize(16);
+      pdf.setTextColor(14, 165, 233);
+      pdf.text('📊 Key Environmental Metrics', margin, currentY);
+      currentY += 10;
+
+      checkNewPage(30);
+      
+      pdf.setFontSize(10);
+      pdf.setTextColor(0, 0, 0);
+      
+      // Operational areas metrics
+      pdf.setFont(undefined, 'bold');
+      pdf.text('Operational Areas (Red Zones):', margin, currentY);
+      currentY += 6;
+      pdf.setFont(undefined, 'normal');
+      pdf.text(`• Total Areas Analyzed: ${reportData.redAreas.length}`, margin + 5, currentY);
+      currentY += 5;
+      pdf.text(`• Average NDVI: ${reportData.redAreas[0]?.environmentalData?.ndvi?.mean?.toFixed(3) || 'N/A'}`, margin + 5, currentY);
+      currentY += 5;
+      pdf.text(`• Average NDWI: ${reportData.redAreas[0]?.environmentalData?.ndwi?.mean?.toFixed(3) || 'N/A'}`, margin + 5, currentY);
+      currentY += 5;
+      pdf.text(`• Average Elevation: ${reportData.redAreas[0]?.environmentalData?.elevation?.mean?.toFixed(0) || 'N/A'}m`, margin + 5, currentY);
+      currentY += 10;
+
+      checkNewPage(25);
+      
+      // Reference areas metrics
+      pdf.setFont(undefined, 'bold');
+      pdf.text('Reference Areas (Green Zones):', margin, currentY);
+      currentY += 6;
+      pdf.setFont(undefined, 'normal');
+      pdf.text(`• Total Areas Analyzed: ${reportData.greenAreas.length}`, margin + 5, currentY);
+      currentY += 5;
+      pdf.text(`• Average NDVI: ${reportData.greenAreas[0]?.environmentalData?.ndvi?.mean?.toFixed(3) || 'N/A'}`, margin + 5, currentY);
+      currentY += 5;
+      pdf.text(`• Average NDWI: ${reportData.greenAreas[0]?.environmentalData?.ndwi?.mean?.toFixed(3) || 'N/A'}`, margin + 5, currentY);
+      currentY += 5;
+      pdf.text(`• Average Elevation: ${reportData.greenAreas[0]?.environmentalData?.elevation?.mean?.toFixed(0) || 'N/A'}m`, margin + 5, currentY);
+      currentY += 15;
+
+      // Add AI Analysis section
+      checkNewPage(20);
+      pdf.setFontSize(16);
+      pdf.setTextColor(14, 165, 233);
+      pdf.text('🤖 AI-Powered Analysis', margin, currentY);
+      currentY += 10;
+
+      // Split content into paragraphs and add with proper pagination
+      const paragraphs = reportContent.split(/\n\n+/);
+      pdf.setFontSize(10);
+      pdf.setTextColor(0, 0, 0);
+
+      for (const paragraph of paragraphs) {
+        if (!paragraph.trim()) continue;
         
-        // Generate filename
-        const fileName = `${reportData.company.name.replace(/[^a-zA-Z0-9]/g, '_')}_Environmental_Report_${new Date().toISOString().split('T')[0]}.pdf`;
+        // Check if this is a heading (starts with # or ##)
+        if (paragraph.trim().startsWith('#')) {
+          checkNewPage(15);
+          pdf.setFont(undefined, 'bold');
+          pdf.setFontSize(12);
+          const heading = paragraph.replace(/^#+\s*/, '');
+          pdf.text(heading, margin, currentY);
+          currentY += 8;
+          pdf.setFont(undefined, 'normal');
+          pdf.setFontSize(10);
+          continue;
+        }
+
+        // Split long paragraphs into lines that fit the page width
+        const lines = pdf.splitTextToSize(paragraph.trim(), contentWidth);
         
-        // Save PDF
-        pdf.save(fileName);
+        // Check if we need a new page for this paragraph
+        checkNewPage(lines.length * 5 + 5);
         
-        console.log('📄 PDF generated and downloaded:', fileName);
-        
-        // Return download URL (in this case, the filename since it's downloaded directly)
-        return `downloaded://${fileName}`;
-        
-      } finally {
-        // Clean up temporary element
-        document.body.removeChild(tempDiv);
+        // Add each line
+        for (const line of lines) {
+          if (currentY > pageHeight - 30) {
+            pdf.addPage();
+            currentY = margin;
+            addHeader(pdf.getNumberOfPages());
+          }
+          pdf.text(line, margin, currentY);
+          currentY += 5;
+        }
+        currentY += 3; // Extra space between paragraphs
       }
+
+      // Add data sources section
+      checkNewPage(30);
+      pdf.setFontSize(12);
+      pdf.setTextColor(14, 165, 233);
+      pdf.text('Data Sources & Methodology', margin, currentY);
+      currentY += 8;
+
+      pdf.setFontSize(10);
+      pdf.setTextColor(0, 0, 0);
+      pdf.text('• Satellite Data: Google Earth Engine (Landsat, Sentinel)', margin, currentY);
+      currentY += 5;
+      pdf.text('• AI Analysis: Google Gemini 1.5 Pro with environmental expertise', margin, currentY);
+      currentY += 5;
+      pdf.text(`• Analysis Period: ${reportData.metadata.temporal_coverage.start_date} to ${reportData.metadata.temporal_coverage.end_date}`, margin, currentY);
+      currentY += 5;
+      pdf.text(`• Coordinate System: WGS84 (EPSG:4326) | Resolution: ${reportData.metadata.spatial_resolution}`, margin, currentY);
+      currentY += 5;
+      pdf.text(`• Confidence Level: ${reportData.metadata.confidence_level}%`, margin, currentY);
+
+      // Add footer to all pages
+      const totalPages = pdf.getNumberOfPages();
+      for (let i = 1; i <= totalPages; i++) {
+        pdf.setPage(i);
+        addFooter();
+      }
+      
+      // Generate filename
+      const fileName = `${reportData.company.name.replace(/[^a-zA-Z0-9]/g, '_')}_Environmental_Report_${new Date().toISOString().split('T')[0]}.pdf`;
+      
+      // Save PDF
+      pdf.save(fileName);
+      
+      console.log('📄 Multi-page PDF generated and downloaded:', fileName);
+      
+      return `downloaded://${fileName}`;
       
     } catch (error) {
       console.error('PDF generation failed:', error);
@@ -382,125 +503,6 @@ ${prompt.outputFormat}
     }
   }
 
-  /**
-   * Create HTML content for PDF generation
-   */
-  private static createPDFHTML(reportData: ReportData, request: ReportRequest, geminiContent: string): string {
-    const currentDate = new Date().toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-
-    // Parse Gemini content into formatted sections
-    const formatContent = (content: string) => {
-      return content
-        .replace(/\n\n/g, '</p><p>')
-        .replace(/\n/g, '<br/>')
-        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-        .replace(/\*(.*?)\*/g, '<em>$1</em>')
-        .replace(/^# (.*$)/gm, '<h1>$1</h1>')
-        .replace(/^## (.*$)/gm, '<h2>$1</h2>')
-        .replace(/^### (.*$)/gm, '<h3>$1</h3>');
-    };
-
-    return `
-      <div style="width: 210mm; min-height: 297mm; margin: 0 auto; padding: 20mm; background-color: white; color: #000; font-family: Arial, sans-serif; font-size: 12px; line-height: 1.6;">
-        
-        <!-- Header -->
-        <div style="border-bottom: 3px solid #0ea5e9; padding-bottom: 20px; margin-bottom: 30px;">
-          <h1 style="margin: 0 0 10px 0; color: #0ea5e9; font-size: 24px; font-weight: bold;">
-            Environmental Impact Report
-          </h1>
-          <h2 style="margin: 0 0 15px 0; color: #374151; font-size: 18px; font-weight: normal;">
-            ${reportData.company.name}
-          </h2>
-          <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: #6b7280;">
-            <div>
-              <strong>Industry:</strong> ${reportData.company.industry}<br/>
-              <strong>Analysis Date:</strong> ${reportData.company.analysisDate}<br/>
-              <strong>Report Type:</strong> ${request.reportType}
-            </div>
-            <div style="text-align: right;">
-              <strong>Generated:</strong> ${currentDate}<br/>
-              <strong>Powered by:</strong> Gemini 2.5 Pro<br/>
-              <strong>Data Source:</strong> Google Earth Engine
-            </div>
-          </div>
-        </div>
-
-        <!-- Key Metrics Summary -->
-        <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin-bottom: 30px;">
-          <h3 style="margin: 0 0 15px 0; color: #0ea5e9; font-size: 16px;">
-            📊 Key Environmental Metrics
-          </h3>
-          
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-            <div>
-              <h4 style="margin: 0 0 10px 0; font-size: 14px; color: #374151;">
-                Operational Areas (Red Zones)
-              </h4>
-              <ul style="margin: 0; padding-left: 20px; font-size: 11px;">
-                <li>Total Areas Analyzed: ${reportData.redAreas.length}</li>
-                <li>Average NDVI: ${reportData.redAreas[0]?.environmentalData?.ndvi?.mean?.toFixed(3) || 'N/A'}</li>
-                <li>Average NDWI: ${reportData.redAreas[0]?.environmentalData?.ndwi?.mean?.toFixed(3) || 'N/A'}</li>
-                <li>Average Elevation: ${reportData.redAreas[0]?.environmentalData?.elevation?.mean?.toFixed(0) || 'N/A'}m</li>
-              </ul>
-            </div>
-            
-            <div>
-              <h4 style="margin: 0 0 10px 0; font-size: 14px; color: #374151;">
-                Reference Areas (Green Zones)
-              </h4>
-              <ul style="margin: 0; padding-left: 20px; font-size: 11px;">
-                <li>Total Areas Analyzed: ${reportData.greenAreas.length}</li>
-                <li>Average NDVI: ${reportData.greenAreas[0]?.environmentalData?.ndvi?.mean?.toFixed(3) || 'N/A'}</li>
-                <li>Average NDWI: ${reportData.greenAreas[0]?.environmentalData?.ndwi?.mean?.toFixed(3) || 'N/A'}</li>
-                <li>Average Elevation: ${reportData.greenAreas[0]?.environmentalData?.elevation?.mean?.toFixed(0) || 'N/A'}m</li>
-              </ul>
-            </div>
-          </div>
-        </div>
-
-        <!-- AI Analysis Content -->
-        <div style="margin-bottom: 30px;">
-          <h3 style="margin: 0 0 20px 0; color: #0ea5e9; font-size: 16px; border-bottom: 2px solid #e2e8f0; padding-bottom: 5px;">
-            🤖 AI-Powered Analysis
-          </h3>
-          
-          <div style="font-size: 12px; line-height: 1.6; text-align: justify;">
-            <p>${formatContent(geminiContent)}</p>
-          </div>
-        </div>
-
-        <!-- Data Source Information -->
-        <div style="border-top: 2px solid #e2e8f0; padding-top: 20px; margin-top: 40px; font-size: 10px; color: #6b7280;">
-          <h4 style="margin: 0 0 10px 0; font-size: 12px; color: #374151;">
-            Data Sources & Methodology
-          </h4>
-          <p style="margin: 0 0 10px 0;">
-            <strong>Satellite Data:</strong> Google Earth Engine (Landsat, Sentinel)
-          </p>
-          <p style="margin: 0 0 10px 0;">
-            <strong>AI Analysis:</strong> Google Gemini 2.5 Pro with environmental expertise
-          </p>
-          <p style="margin: 0 0 10px 0;">
-            <strong>Analysis Period:</strong> ${reportData.metadata.temporal_coverage.start_date} to ${reportData.metadata.temporal_coverage.end_date}
-          </p>
-          <p style="margin: 0;">
-            <strong>Coordinate System:</strong> WGS84 (EPSG:4326) | 
-            <strong> Resolution:</strong> ${reportData.metadata.spatial_resolution} | 
-            <strong> Confidence:</strong> ${reportData.metadata.confidence_level}%
-          </p>
-        </div>
-
-        <!-- Footer -->
-        <div style="position: absolute; bottom: 10mm; left: 20mm; right: 20mm; text-align: center; font-size: 10px; color: #9ca3af; border-top: 1px solid #e5e7eb; padding-top: 10px;">
-          ProtectEarth Environmental Impact Monitoring Platform | Powered by AI & Satellite Data
-        </div>
-      </div>
-    `;
-  }
 
   /**
    * Generate unique report ID

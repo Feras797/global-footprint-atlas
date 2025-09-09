@@ -26,18 +26,84 @@ interface AnalysisMapProps {
 }
 
 interface SimilarArea {
-  coordinates: [number, number, number, number]; // [tlx, tly, brx, bry]
+  coordinates: [number, number, number, number]; // [tlx, tly, brx, bry] - converted from polygon
   similarity: number;
+  rank: number;
+  name: string;
+}
+
+// Real API response structure
+interface ApiSimilarArea {
+  geometry: {
+    rm: string; // "Polygon"
+    ja: number[][][]; // [[[lng, lat], [lng, lat], ...]]
+    xg?: any; // Optional extra fields from API
+    args?: any;
+    ol?: any;
+    la?: any;
+    da?: any;
+  };
+  similarity: number;
+  position: number;
+  rank: number;
+  name: string;
 }
 
 interface AnalysisResponse {
-  top_3: [
+  // The API returns an array of similar areas, not the old top_3 format
+  data?: ApiSimilarArea[]; // For real API response
+  // Keep old format for fallback/mock
+  top_3?: [
     [number, number, number, number],
     [number, number, number, number], 
     [number, number, number, number]
   ];
-  similarity: [number, number, number];
+  similarity?: [number, number, number];
 }
+
+/**
+ * Convert GeoJSON polygon coordinates to bounding box [tlx, tly, brx, bry]
+ */
+const convertPolygonToBoundingBox = (polygon: number[][]): [number, number, number, number] => {
+  // Extract all longitude and latitude values from the polygon
+  const lngs = polygon.map(point => point[0]);
+  const lats = polygon.map(point => point[1]);
+  
+  // Find min/max values
+  const minLng = Math.min(...lngs);
+  const maxLng = Math.max(...lngs);
+  const minLat = Math.min(...lats);
+  const maxLat = Math.max(...lats);
+  
+  // Return as [left, top, right, bottom] - Google Maps format
+  return [minLng, maxLat, maxLng, minLat];
+};
+
+/**
+ * Parse real API response and convert to internal SimilarArea format
+ */
+const parseApiResponse = (apiAreas: ApiSimilarArea[]): SimilarArea[] => {
+  return apiAreas.map(area => {
+    // Extract the first (and usually only) polygon from the geometry
+    const polygon = area.geometry.ja[0];
+    const coordinates = convertPolygonToBoundingBox(polygon);
+    
+    console.log(`🔄 Converting ${area.name}:`, {
+      originalPolygon: polygon,
+      convertedBoundingBox: coordinates,
+      similarity: area.similarity,
+      rank: area.rank
+    });
+    
+    return {
+      coordinates,
+      similarity: area.similarity,
+      rank: area.rank,
+      name: area.name
+    };
+  });
+};
+
 
 export const CompanyAnalysisMap: React.FC<AnalysisMapProps> = ({
   companyName,
@@ -178,14 +244,34 @@ export const CompanyAnalysisMap: React.FC<AnalysisMapProps> = ({
         throw new Error(`API request failed: ${response.status}`);
       }
 
-      const data: AnalysisResponse = await response.json();
+      const data = await response.json();
+      console.log('📥 Raw API response:', data);
       
-      // Convert response to SimilarArea format
-      const newSimilarAreas: SimilarArea[] = data.top_3.map((coords, index) => ({
-        coordinates: coords,
-        similarity: data.similarity[index]
-      }));
+      let newSimilarAreas: SimilarArea[] = [];
+      
+      // Check if it's the new API format (array of areas) or old format
+      if (Array.isArray(data)) {
+        // New API format: direct array of ApiSimilarArea objects
+        console.log('🔄 Processing new API format with GeoJSON polygons');
+        newSimilarAreas = parseApiResponse(data as ApiSimilarArea[]);
+      } else if (data.data && Array.isArray(data.data)) {
+        // API response wrapped in data property
+        console.log('🔄 Processing wrapped API response');
+        newSimilarAreas = parseApiResponse(data.data as ApiSimilarArea[]);
+      } else if (data.top_3 && data.similarity) {
+        // Old API format fallback
+        console.log('🔄 Processing old API format');
+        newSimilarAreas = data.top_3.map((coords: [number, number, number, number], index: number) => ({
+          coordinates: coords,
+          similarity: data.similarity[index],
+          rank: index + 1,
+          name: `Area ${index + 1}`
+        }));
+      } else {
+        throw new Error('Unrecognized API response format');
+      }
 
+      console.log('✅ Parsed similar areas:', newSimilarAreas);
       setSimilarAreas(prev => [...prev, ...newSimilarAreas]);
       
     } catch (error) {
@@ -215,18 +301,25 @@ export const CompanyAnalysisMap: React.FC<AnalysisMapProps> = ({
     const mockAreas: SimilarArea[] = [
       {
         coordinates: [centerLng + 0.02, centerLat + 0.01, centerLng + 0.03, centerLat],
-        similarity: 0.95
+        similarity: 0.95,
+        rank: 1,
+        name: "Mock Gold"
       },
       {
         coordinates: [centerLng - 0.03, centerLat + 0.02, centerLng - 0.02, centerLat + 0.01],
-        similarity: 0.87
+        similarity: 0.87,
+        rank: 2,
+        name: "Mock Silver"
       },
       {
         coordinates: [centerLng + 0.01, centerLat - 0.02, centerLng + 0.02, centerLat - 0.01],
-        similarity: 0.76
+        similarity: 0.76,
+        rank: 3,
+        name: "Mock Bronze"
       }
     ];
 
+    console.log('🎭 Created mock similar areas:', mockAreas);
     setSimilarAreas(prev => [...prev, ...mockAreas]);
   };
 
@@ -263,9 +356,9 @@ export const CompanyAnalysisMap: React.FC<AnalysisMapProps> = ({
       rectangle.setMap(mapInstance.current);
       greenRectangles.push(rectangle);
 
-      // Add click handler
+      // Add click handler with enhanced info
       rectangle.addListener('click', () => {
-        console.log(`Clicked similar area ${index + 1}, similarity: ${area.similarity}`);
+        console.log(`🟢 Clicked similar area: ${area.name} (Rank ${area.rank}), similarity: ${(area.similarity * 100).toFixed(1)}%`);
       });
 
       // Add hover effects
@@ -313,10 +406,11 @@ export const CompanyAnalysisMap: React.FC<AnalysisMapProps> = ({
         }));
         
         const greenAreasData = similarAreas.map((area, index) => ({
-          name: `Similar Area ${index + 1}`,
+          name: area.name || `Similar Area ${index + 1}`,
           coordinates: area.coordinates,
           location: 'Environmentally Similar Region',
           similarity: area.similarity,
+          rank: area.rank,
           environmentalData: generateMockEnvironmentalData()
         }));
         
