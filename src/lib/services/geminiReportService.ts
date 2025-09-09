@@ -676,45 +676,34 @@ ${prompt.outputFormat}
   }
 
   /**
-   * Generate PDF from Gemini analysis using jsPDF with proper pagination
+   * Generate simple, clean PDF from Gemini analysis with proper multi-page content handling
    */
   private static async generatePDF(
     geminiResponse: any,
     reportData: ReportData,
     request: ReportRequest
   ): Promise<string> {
-    console.log('📄 Starting PDF generation...');
-    console.log('📊 Input data for PDF:', {
-      hasGeminiResponse: !!geminiResponse,
-      geminiResponseType: typeof geminiResponse,
-      geminiKeys: geminiResponse ? Object.keys(geminiResponse) : [],
-      reportDataCompany: reportData.company.name,
-      requestType: request.reportType
-    });
+    console.log('📄 Starting simple PDF generation...');
     
     try {
       const jsPDF = (await import('jspdf')).default;
       console.log('✅ jsPDF library loaded successfully');
       
-      // Handle both Gemini API response format and our processed format
+      // Handle different response formats
       let reportContent = '';
       if (geminiResponse.candidates && geminiResponse.candidates[0]?.content?.parts?.[0]?.text) {
-        // Direct Gemini API response format
         reportContent = geminiResponse.candidates[0].content.parts[0].text;
       } else if (geminiResponse.content) {
-        // Our processed format
         reportContent = geminiResponse.content;
       } else if (typeof geminiResponse === 'string') {
-        // Direct string response
         reportContent = geminiResponse;
       } else {
         reportContent = 'Report content not available';
       }
       
-      console.log('📝 Extracted report content:', {
+      console.log('📝 Processing content for simple PDF:', {
         contentLength: reportContent.length,
-        hasContent: !!reportContent,
-        contentPreview: reportContent.substring(0, 100) + '...'
+        hasContent: !!reportContent
       });
       
       const pdf = new jsPDF({
@@ -723,416 +712,223 @@ ${prompt.outputFormat}
         format: 'a4'
       });
 
-      // Enhanced styling constants
+      // Simple PDF constants
       const pageWidth = 210;
       const pageHeight = 297;
       const margin = 20;
       const contentWidth = pageWidth - (margin * 2);
+      const lineHeight = 6;
+      const linesPerPage = Math.floor((pageHeight - (margin * 2) - 20) / lineHeight); // Reserve space for page number
       let currentY = margin;
+      let pageNumber = 1;
 
-      const colors = {
-        primary: [52, 152, 219] as [number, number, number],
-        success: [34, 139, 34] as [number, number, number],
-        danger: [220, 20, 60] as [number, number, number],
-        dark: [33, 37, 41] as [number, number, number],
-        light: [248, 249, 250] as [number, number, number],
-        text: [0, 0, 0] as [number, number, number],
-        muted: [108, 117, 125] as [number, number, number]
-      };
-
-      // Enhanced helper functions
-      const addHeader = (pageNumber: number) => {
-        // Professional gradient header
-        pdf.setFillColor(...colors.primary);
-        pdf.rect(0, 0, pageWidth, 35, 'F');
-        
-        // Accent line
-        pdf.setFillColor(colors.primary[0] + 30, colors.primary[1] + 30, colors.primary[2] + 30);
-        pdf.rect(0, 30, pageWidth, 5, 'F');
-        
-        // Company logo placeholder
-        pdf.setFillColor(255, 255, 255);
-        pdf.circle(25, 17.5, 10, 'F');
-        pdf.setTextColor(...colors.primary);
-        pdf.setFontSize(14);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text('🌍', 20, 21);
-        
-        // Title
-        pdf.setTextColor(255, 255, 255);
-        pdf.setFontSize(20);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text('Environmental Impact Report', 45, 20);
-        
-        // Subtitle
-        pdf.setFontSize(11);
-        pdf.setFont('helvetica', 'normal');
-        pdf.text(`${reportData.company.name} • ${reportData.company.industry}`, 45, 27);
-        
-        // Page number
-        pdf.setFontSize(9);
-        pdf.text(`Page ${pageNumber}`, pageWidth - margin, 20, { align: 'right' });
-        
-        currentY = 45;
-      };
-
-      const addFooter = () => {
-        // Footer background
-        pdf.setFillColor(...colors.light);
-        pdf.rect(0, pageHeight - 25, pageWidth, 25, 'F');
-        
-        // Border line
-        pdf.setDrawColor(...colors.primary);
-        pdf.setLineWidth(0.5);
-        pdf.line(0, pageHeight - 25, pageWidth, pageHeight - 25);
-        
-        pdf.setTextColor(...colors.muted);
-        pdf.setFontSize(8);
-        pdf.setFont('helvetica', 'normal');
-        
-        // Platform branding
-        pdf.text('ProtectEarth Environmental Monitoring Platform', margin, pageHeight - 16);
-        pdf.text('Powered by Google Earth Engine & Gemini 2.5 Pro AI', margin, pageHeight - 11);
-        
-        // Generation info
-        const dateText = `Generated: ${new Date().toLocaleDateString()}`;
-        pdf.text(dateText, pageWidth - margin, pageHeight - 16, { align: 'right' });
-        pdf.text(`Total Pages: ${pdf.getNumberOfPages()}`, pageWidth - margin, pageHeight - 11, { align: 'right' });
-      };
-
-      const checkNewPage = (requiredSpace: number = 20) => {
-        if (currentY + requiredSpace > pageHeight - 40) {
-          pdf.addPage();
-          currentY = margin;
-          addHeader(pdf.getNumberOfPages());
-        }
-      };
-
-      const addSectionHeader = (title: string, icon: string, color: [number, number, number] = colors.primary) => {
-        checkNewPage(25);
-        
-        // Section background with gradient effect
-        pdf.setFillColor(color[0], color[1], color[2], 0.1);
-        pdf.rect(margin - 5, currentY - 3, contentWidth + 10, 20, 'F');
-        
-        // Left accent bar
-        pdf.setFillColor(...color);
-        pdf.rect(margin - 5, currentY - 3, 4, 20, 'F');
-        
-        // Section title
-        pdf.setTextColor(...color);
-        pdf.setFontSize(16);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text(`${icon} ${title}`, margin + 5, currentY + 10);
-        
-        currentY += 25;
-      };
-
-      const addMetricCard = (title: string, metrics: string[], bgColor: [number, number, number], titleColor: [number, number, number]) => {
-        const cardHeight = metrics.length * 6 + 20;
-        checkNewPage(cardHeight + 10);
-        
-        // Card shadow effect
-        pdf.setFillColor(0, 0, 0, 0.1);
-        pdf.rect(margin + 2, currentY + 2, contentWidth, cardHeight, 'F');
-        
-        // Card background
-        pdf.setFillColor(255, 255, 255);
-        pdf.rect(margin, currentY, contentWidth, cardHeight, 'F');
-        
-        // Card border
-        pdf.setDrawColor(bgColor[0], bgColor[1], bgColor[2], 0.3);
-        pdf.setLineWidth(1);
-        pdf.rect(margin, currentY, contentWidth, cardHeight);
-        
-        // Card header
-        pdf.setFillColor(bgColor[0], bgColor[1], bgColor[2], 0.1);
-        pdf.rect(margin, currentY, contentWidth, 15, 'F');
-        
-        // Title
-        pdf.setTextColor(...titleColor);
-        pdf.setFontSize(12);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text(title, margin + 8, currentY + 10);
-        
-        // Metrics
-        pdf.setTextColor(...colors.text);
+      // Helper function to add page number
+      const addPageNumber = () => {
         pdf.setFontSize(10);
         pdf.setFont('helvetica', 'normal');
+        pdf.setTextColor(0, 0, 0);
+        pdf.text(`Page ${pageNumber}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
+      };
+
+      // Helper function to check if we need a new page
+      const checkNewPage = (linesNeeded: number = 1) => {
+        if (currentY + (linesNeeded * lineHeight) > pageHeight - 20) {
+          addPageNumber();
+          pdf.addPage();
+          pageNumber++;
+          currentY = margin;
+        }
+      };
+
+      // Helper function to add text with proper line wrapping and page breaks
+      const addText = (text: string, fontSize: number = 11, fontStyle: string = 'normal', isHeading: boolean = false) => {
+        pdf.setFontSize(fontSize);
+        pdf.setFont('helvetica', fontStyle);
+        pdf.setTextColor(0, 0, 0);
         
-        metrics.forEach((metric, i) => {
-          pdf.text(`• ${metric}`, margin + 10, currentY + 20 + (i * 6));
+        const lines = pdf.splitTextToSize(text, contentWidth);
+        
+        // For headings, ensure we don't break them across pages
+        if (isHeading && lines.length > 1) {
+          checkNewPage(lines.length + 1);
+        } else {
+          checkNewPage(lines.length);
+        }
+        
+        lines.forEach((line: string, index: number) => {
+          checkNewPage(1);
+          pdf.text(line, margin, currentY + lineHeight);
+          currentY += lineHeight;
         });
         
-        currentY += cardHeight + 10;
+        // Add extra space after headings
+        if (isHeading) {
+          currentY += lineHeight * 0.5;
+        } else {
+          currentY += lineHeight * 0.3; // Small spacing between paragraphs
+        }
       };
 
-      const addVisualChart = (title: string, redValue: number, greenValue: number, unit: string = '') => {
-        checkNewPage(45);
-        
-        // Chart title
-        pdf.setTextColor(...colors.text);
-        pdf.setFontSize(12);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text(title, margin, currentY);
-        currentY += 10;
-        
-        // Chart background
-        pdf.setFillColor(...colors.light);
-        pdf.rect(margin, currentY, contentWidth, 30, 'F');
-        pdf.setDrawColor(...colors.muted);
-        pdf.setLineWidth(0.3);
-        pdf.rect(margin, currentY, contentWidth, 30);
-        
-        // Calculate bar widths
-        const maxValue = Math.max(Math.abs(redValue), Math.abs(greenValue), 1);
-        const barMaxWidth = contentWidth * 0.6;
-        const redWidth = (Math.abs(redValue) / maxValue) * barMaxWidth;
-        const greenWidth = (Math.abs(greenValue) / maxValue) * barMaxWidth;
-        
-        // Red zone bar
-        pdf.setFillColor(...colors.danger, 0.8);
-        pdf.rect(margin + 10, currentY + 5, redWidth, 8, 'F');
-        
-        // Green zone bar
-        pdf.setFillColor(...colors.success, 0.8);
-        pdf.rect(margin + 10, currentY + 17, greenWidth, 8, 'F');
-        
-        // Value labels
-        pdf.setFontSize(9);
-        pdf.setFont('helvetica', 'normal');
-        pdf.setTextColor(...colors.danger);
-        pdf.text(`Red Zone: ${redValue.toFixed(3)}${unit}`, margin + redWidth + 15, currentY + 10);
-        pdf.setTextColor(...colors.success);
-        pdf.text(`Green Zone: ${greenValue.toFixed(3)}${unit}`, margin + greenWidth + 15, currentY + 22);
-        
-        currentY += 40;
-      };
-
-      // Start first page
-      addHeader(1);
-
-      // Executive Summary
-      checkNewPage(60);
-      pdf.setFillColor(colors.primary[0], colors.primary[1], colors.primary[2], 0.05);
-      pdf.rect(margin - 5, currentY - 5, contentWidth + 10, 55, 'F');
-      
-      pdf.setTextColor(...colors.primary);
-      pdf.setFontSize(22);
+      // Title page - simple header
+      pdf.setFontSize(20);
       pdf.setFont('helvetica', 'bold');
-      pdf.text('EXECUTIVE SUMMARY', margin, currentY + 10);
-      
-      pdf.setTextColor(...colors.text);
-      pdf.setFontSize(11);
+      pdf.setTextColor(0, 0, 0);
+      pdf.text('Environmental Impact Report', pageWidth / 2, currentY + 10, { align: 'center' });
+      currentY += 20;
+
+      pdf.setFontSize(16);
       pdf.setFont('helvetica', 'normal');
-      const summaryText = `This comprehensive environmental impact assessment analyzes ${reportData.company.name}'s operational footprint using advanced satellite imagery and AI-powered analysis. The report provides detailed comparisons between operational areas and environmentally similar reference regions to identify potential impacts and sustainability opportunities.`;
-      const summaryLines = pdf.splitTextToSize(summaryText, contentWidth - 10);
+      pdf.text(reportData.company.name, pageWidth / 2, currentY + 10, { align: 'center' });
+      currentY += 15;
+
+      pdf.setFontSize(12);
+      pdf.text(`Industry: ${reportData.company.industry}`, pageWidth / 2, currentY + 5, { align: 'center' });
+      currentY += 10;
+
+      pdf.text(`Generated: ${new Date().toLocaleDateString()}`, pageWidth / 2, currentY + 5, { align: 'center' });
+      currentY += 20;
+
+      // Simple horizontal line
+      pdf.setDrawColor(0, 0, 0);
+      pdf.setLineWidth(0.5);
+      pdf.line(margin, currentY, pageWidth - margin, currentY);
+      currentY += 15;
+
+      // Basic company information section
+      addText('COMPANY INFORMATION', 14, 'bold', true);
+      addText(`Company: ${reportData.company.name}`);
+      addText(`Industry: ${reportData.company.industry}`);
+      addText(`Analysis Date: ${reportData.company.analysisDate}`);
+      addText(`Report Type: ${request.reportType}`);
+      currentY += 10;
+
+      // Basic metrics
+      addText('ENVIRONMENTAL METRICS OVERVIEW', 14, 'bold', true);
       
-      let summaryY = currentY + 22;
-      summaryLines.forEach((line: string) => {
-        pdf.text(line, margin, summaryY);
-        summaryY += 5;
-      });
-      
-      currentY += 60;
-
-      // Enhanced metrics section
-      addSectionHeader('Environmental Metrics Overview', '📊');
-
-      // Visual comparisons
-      const redData = reportData.redAreas?.[0]?.environmentalData;
-      const greenData = reportData.greenAreas?.[0]?.environmentalData;
-      
-      if (redData && greenData) {
-        const redNDVI = typeof redData.ndvi === 'number' ? redData.ndvi : redData.ndvi?.mean || 0;
-        const greenNDVI = typeof greenData.ndvi === 'number' ? greenData.ndvi : greenData.ndvi?.mean || 0;
-        const redNDWI = typeof redData.ndwi === 'number' ? redData.ndwi : redData.ndwi?.mean || 0;
-        const greenNDWI = typeof greenData.ndwi === 'number' ? greenData.ndwi : greenData.ndwi?.mean || 0;
-        const redElevation = typeof redData.elevation === 'number' ? redData.elevation : redData.elevation?.mean || 0;
-        const greenElevation = typeof greenData.elevation === 'number' ? greenData.elevation : greenData.elevation?.mean || 0;
-        
-        addVisualChart('Vegetation Health Index (NDVI)', redNDVI, greenNDVI);
-        addVisualChart('Water Content Index (NDWI)', redNDWI, greenNDWI);
-        addVisualChart('Elevation Comparison', redElevation, greenElevation, 'm');
-      }
-
-      // Helper function to safely format environmental data
-      const formatMetric = (value: any, decimals: number = 2): string => {
-        if (typeof value === 'number') {
-          return value.toFixed(decimals);
-        }
-        if (value && typeof value === 'object' && 'mean' in value) {
-          return value.mean.toFixed(decimals);
-        }
-        if (value && typeof value === 'object' && 'annual' in value) {
-          return value.annual.toFixed(decimals);
-        }
-        return 'N/A';
-      };
-
-      // Detailed metric cards
+      // Red areas summary
       if (reportData.redAreas?.length > 0) {
-        const redArea = reportData.redAreas[0];
-        const envData = redArea.environmentalData;
-        const redMetrics = [
-          `Total Areas Analyzed: ${reportData.redAreas.length}`,
-          `Vegetation Index (NDVI): ${formatMetric(envData?.ndvi, 3)}`,
-          `Water Index (NDWI): ${formatMetric(envData?.ndwi, 3)}`,
-          `Average Elevation: ${formatMetric(envData?.elevation, 0)}m`,
-          `Temperature: ${formatMetric(envData?.temperature, 1)}°C`,
-          `Annual Precipitation: ${formatMetric(envData?.precipitation, 0)}mm`
-        ];
-        addMetricCard('🔴 Operational Areas (Red Zones)', redMetrics, colors.danger, colors.danger);
-      }
-
-      if (reportData.greenAreas?.length > 0) {
-        const greenArea = reportData.greenAreas[0];
-        const envData = greenArea.environmentalData;
-        const greenMetrics = [
-          `Total Areas Analyzed: ${reportData.greenAreas.length}`,
-          `Vegetation Index (NDVI): ${formatMetric(envData?.ndvi, 3)}`,
-          `Water Index (NDWI): ${formatMetric(envData?.ndwi, 3)}`,
-          `Average Elevation: ${formatMetric(envData?.elevation, 0)}m`,
-          `Temperature: ${formatMetric(envData?.temperature, 1)}°C`,
-          `Annual Precipitation: ${formatMetric(envData?.precipitation, 0)}mm`
-        ];
-        addMetricCard('🟢 Reference Areas (Green Zones)', greenMetrics, colors.success, colors.success);
-      }
-
-      // AI Analysis with enhanced formatting
-      addSectionHeader('AI-Powered Environmental Analysis', '🤖');
-
-      const paragraphs = reportContent.split(/\n\n+/);
-      
-      for (const paragraph of paragraphs) {
-        if (!paragraph.trim()) continue;
+        addText('Operational Areas (Red Zones):', 12, 'bold');
+        addText(`Total Areas Analyzed: ${reportData.redAreas.length}`);
         
-        checkNewPage(15);
-        
-        // Enhanced heading formatting
-        if (paragraph.trim().startsWith('#')) {
-          const heading = paragraph.replace(/^#+\s*/, '');
-          
-          // Heading background
-          pdf.setFillColor(colors.primary[0], colors.primary[1], colors.primary[2], 0.1);
-          pdf.rect(margin, currentY - 3, contentWidth, 15, 'F');
-          
-          pdf.setFontSize(13);
-          pdf.setFont('helvetica', 'bold');
-          pdf.setTextColor(...colors.primary);
-          
-          const headingLines = pdf.splitTextToSize(heading, contentWidth - 10);
-          headingLines.forEach((line: string) => {
-            checkNewPage(8);
-            pdf.text(line, margin + 5, currentY + 8);
-            currentY += 6;
-          });
-          currentY += 10;
-          continue;
+        const firstRed = reportData.redAreas[0];
+        if (firstRed?.environmentalData) {
+          const env = firstRed.environmentalData;
+          addText(`Vegetation Index (NDVI): ${typeof env.ndvi === 'number' ? env.ndvi.toFixed(3) : (env.ndvi?.mean?.toFixed(3) || 'N/A')}`);
+          addText(`Water Index (NDWI): ${typeof env.ndwi === 'number' ? env.ndwi.toFixed(3) : (env.ndwi?.mean?.toFixed(3) || 'N/A')}`);
+          addText(`Elevation: ${typeof env.elevation === 'number' ? env.elevation.toFixed(0) + 'm' : (env.elevation?.mean?.toFixed(0) + 'm' || 'N/A')}`);
         }
-        
-        // Enhanced list formatting
-        if (paragraph.includes('•') || paragraph.includes('-') || paragraph.toLowerCase().includes('recommendation')) {
-          pdf.setFillColor(colors.light[0], colors.light[1], colors.light[2], 0.5);
-          const lines = pdf.splitTextToSize(paragraph.trim(), contentWidth - 15);
-          pdf.rect(margin, currentY, contentWidth, lines.length * 5 + 8, 'F');
-          
-          pdf.setFontSize(11);
-          pdf.setFont('helvetica', 'normal');
-          pdf.setTextColor(...colors.text);
-          
-          lines.forEach((line: string) => {
-            checkNewPage(6);
-            pdf.text(line, margin + 8, currentY + 6);
-            currentY += 5;
-          });
-          currentY += 10;
-          continue;
-        }
-        
-        // Regular paragraphs with better spacing
-        pdf.setFontSize(11);
-        pdf.setFont('helvetica', 'normal');
-        pdf.setTextColor(...colors.text);
-        
-        const lines = pdf.splitTextToSize(paragraph.trim(), contentWidth);
-        checkNewPage(lines.length * 5 + 8);
-        
-        lines.forEach((line: string) => {
-          checkNewPage(6);
-          pdf.text(line, margin, currentY);
-          currentY += 5;
-        });
         currentY += 8;
       }
 
-      // Enhanced methodology section
-      addSectionHeader('Methodology & Data Sources', '📊', colors.dark);
-
-      const methodologyData = [
-        {
-          title: '🛰️ Satellite Data Sources',
-          items: [
-            'Google Earth Engine Platform',
-            'Landsat 8/9 Multispectral Imagery (30m resolution)',
-            'SRTM Digital Elevation Model',
-            'MODIS Land Cover Classification'
-          ]
-        },
-        {
-          title: '📅 Analysis Parameters', 
-          items: [
-            `Analysis Period: ${reportData.metadata?.temporal_coverage?.start_date || '2020-01-01'} to ${reportData.metadata?.temporal_coverage?.end_date || '2025-09-09'}`,
-            `Spatial Resolution: ${reportData.metadata?.spatial_resolution || '30m'}`,
-            `Confidence Level: ${reportData.metadata?.confidence_level || '95%'}`,
-            `Coordinate System: WGS84 (EPSG:4326)`
-          ]
-        },
-        {
-          title: '🤖 AI & Processing',
-          items: [
-            'AI Model: Google Gemini 2.5 Pro',
-            'Environmental Impact Assessment Framework',
-            'Statistical Comparative Analysis',
-            'Multi-spectral Index Calculations'
-          ]
+      // Green areas summary
+      if (reportData.greenAreas?.length > 0) {
+        addText('Reference Areas (Green Zones):', 12, 'bold');
+        addText(`Total Areas Analyzed: ${reportData.greenAreas.length}`);
+        
+        const firstGreen = reportData.greenAreas[0];
+        if (firstGreen?.environmentalData) {
+          const env = firstGreen.environmentalData;
+          addText(`Vegetation Index (NDVI): ${typeof env.ndvi === 'number' ? env.ndvi.toFixed(3) : (env.ndvi?.mean?.toFixed(3) || 'N/A')}`);
+          addText(`Water Index (NDWI): ${typeof env.ndwi === 'number' ? env.ndwi.toFixed(3) : (env.ndwi?.mean?.toFixed(3) || 'N/A')}`);
+          addText(`Elevation: ${typeof env.elevation === 'number' ? env.elevation.toFixed(0) + 'm' : (env.elevation?.mean?.toFixed(0) + 'm' || 'N/A')}`);
         }
-      ];
-
-      methodologyData.forEach(section => {
-        addMetricCard(section.title, section.items, colors.light, colors.dark);
-      });
-
-      // Add footers to all pages
-      const totalPages = pdf.getNumberOfPages();
-      for (let i = 1; i <= totalPages; i++) {
-        pdf.setPage(i);
-        addFooter();
+        currentY += 15;
       }
+
+      // AI Analysis - main content with intelligent pagination
+      addText('AI ENVIRONMENTAL ANALYSIS', 14, 'bold', true);
       
+      // Parse the content into logical sections
+      const contentSections = this.parseContentIntoSections(reportContent);
+      
+      for (const section of contentSections) {
+        if (section.type === 'heading') {
+          addText(section.content, 13, 'bold', true);
+        } else if (section.type === 'paragraph') {
+          addText(section.content, 11, 'normal');
+        } else if (section.type === 'list') {
+          // Handle bullet points and lists
+          addText(section.content, 11, 'normal');
+        }
+      }
+
+      // Data sources footer section
+      currentY += 10;
+      pdf.setDrawColor(0, 0, 0);
+      pdf.setLineWidth(0.5);
+      pdf.line(margin, currentY, pageWidth - margin, currentY);
+      currentY += 10;
+      
+      addText('DATA SOURCES & METHODOLOGY', 12, 'bold', true);
+      addText('Satellite Data: Google Earth Engine (Landsat, Sentinel)');
+      addText('AI Analysis: Google Gemini 2.5 Pro');
+      addText(`Analysis Period: ${reportData.metadata?.temporal_coverage?.start_date || '2020-01-01'} to ${reportData.metadata?.temporal_coverage?.end_date || '2025-09-09'}`);
+      addText(`Spatial Resolution: ${reportData.metadata?.spatial_resolution || '30m'}`);
+      addText(`Confidence Level: ${(reportData.metadata?.confidence_level * 100 || 95).toFixed(0)}%`);
+
+      // Add page number to final page
+      addPageNumber();
+
       const fileName = `${reportData.company.name.replace(/[^a-zA-Z0-9]/g, '_')}_Environmental_Report_${new Date().toISOString().split('T')[0]}.pdf`;
-      console.log('💾 Saving PDF with filename:', fileName);
+      console.log('💾 Saving simple PDF:', fileName);
       pdf.save(fileName);
       
-      console.log('🎉 PDF generation completed successfully!', {
+      console.log('🎉 Simple PDF generation completed!', {
         fileName,
         totalPages: pdf.getNumberOfPages(),
-        companyName: reportData.company.name,
-        reportType: request.reportType
+        companyName: reportData.company.name
       });
       
       return `downloaded://${fileName}`;
       
     } catch (error) {
-      console.error('❌ PDF generation failed:', error);
-      console.error('📊 PDF Error details:', {
-        message: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : undefined,
-        companyName: reportData.company.name,
-        geminiResponseType: typeof geminiResponse
-      });
-      throw new Error(`Failed to generate PDF report: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error('❌ Simple PDF generation failed:', error);
+      throw new Error(`Failed to generate simple PDF report: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
+  }
+
+  /**
+   * Parse content into logical sections for better pagination
+   */
+  private static parseContentIntoSections(content: string) {
+    const sections: Array<{type: 'heading' | 'paragraph' | 'list', content: string}> = [];
+    
+    // Split content into paragraphs
+    const paragraphs = content.split(/\n\n+/).filter(p => p.trim());
+    
+    for (const paragraph of paragraphs) {
+      const trimmed = paragraph.trim();
+      
+      // Detect headings (lines starting with # or all caps)
+      if (trimmed.startsWith('#')) {
+        sections.push({
+          type: 'heading',
+          content: trimmed.replace(/^#+\s*/, '')
+        });
+      } else if (trimmed.match(/^[A-Z][A-Z\s]{10,}:?\s*$/) && trimmed.length < 100) {
+        // All caps headings (likely section headers)
+        sections.push({
+          type: 'heading', 
+          content: trimmed
+        });
+      } else if (trimmed.includes('•') || trimmed.includes('-') || 
+                 trimmed.match(/^\d+\./) || trimmed.includes('\n-') || 
+                 trimmed.includes('\n•')) {
+        // Lists and bullet points
+        sections.push({
+          type: 'list',
+          content: trimmed
+        });
+      } else {
+        // Regular paragraphs
+        sections.push({
+          type: 'paragraph',
+          content: trimmed
+        });
+      }
+    }
+    
+    return sections;
   }
 
 
