@@ -3,20 +3,14 @@ import { companies as companiesData } from '@/lib/companies'
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { Sidebar } from "@/components/Sidebar";
 import { CompanyList } from "@/components/CompanyList";
-import { MockCompanyList } from "@/components/MockCompanyList";
 import { DashboardMap } from "@/components/DashboardMap";
 import { CesiumGlobe } from "@/components/CesiumGlobe";
 import { RegionAnalyzer } from "@/components/RegionAnalyzer";
 import { CompanyReport } from "@/components/CompanyReport";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { MetricGrid } from "@/components/dashboard";
-import { 
-  EnhancedCompanyLocation, 
-  MockCompanyData,
-  convertMockDataToEnhanced,
-  convertEnhancedToLegacy 
-} from "@/types/company";
 import { CompanyData, GlobeEntity } from "@/types/globe";
 import mockDataJson from "@/data/mockdata.json";
 
@@ -26,7 +20,7 @@ interface CompanyLocation {
   id: string;
   name: string;
   position: [number, number, number];
-  type: 'manufacturing' | 'mining' | 'agriculture' | 'energy';
+  type: 'manufacturing' | 'mining' | 'agriculture' | 'energy' | 'nuclear' | 'thermal';
   impactScore: number;
   country: string;
 }
@@ -36,7 +30,6 @@ export type DashboardView = 'overview' | 'companies' | 'regions' | 'analysis' | 
 const Dashboard = () => {
   const [activeView, setActiveView] = useState<DashboardView>('overview');
   const [selectedCompany, setSelectedCompany] = useState<CompanyLocation | null>(null);
-  const [selectedEnhancedCompany, setSelectedEnhancedCompany] = useState<EnhancedCompanyLocation | null>(null);
   const [selectedGlobeEntity, setSelectedGlobeEntity] = useState<GlobeEntity | null>(null);
   const [filters, setFilters] = useState({
     type: 'all',
@@ -46,17 +39,36 @@ const Dashboard = () => {
 
   // Removed GEE Analysis state - using simplified approach
 
-  // Load data from mockdata.JSON file
-  const mockCompanies: MockCompanyData[] = mockDataJson as MockCompanyData[];
-  
-  // Convert mock data to enhanced format (flattens all mines into individual entries)
-  const enhancedCompanies: EnhancedCompanyLocation[] = convertMockDataToEnhanced(mockCompanies);
-  
-  // Convert to CompanyData format for globe visualization
-  const globeCompanies: CompanyData[] = mockCompanies as CompanyData[];
+  // Convert our unified companies to format CesiumGlobe expects
+  const globeCompanies: CompanyData[] = companiesData.map(company => ({
+    company: company.name,
+    Industry: company.industry,
+    "Market cap": company.marketCap || "N/A",
+    Revenue: company.revenue || undefined,
+    places: company.places.map(place => {
+      // Calculate center point from rectangular coordinates [tlx, tly, brx, bry]
+      const [tlx, tly, brx, bry] = place.coordinates;
+      const centerLng = (tlx + brx) / 2;
+      const centerLat = (tly + bry) / 2;
+      
+      return {
+        name: place.name,
+        location: place.location,
+        coordinates: [centerLng, centerLat] as [number, number], // Convert to center point
+        "Number of plants": company.numberOfPlants || 1
+      };
+    })
+  }));
 
-  // Use shared company list for list and metrics
-  const companyLocations: CompanyLocation[] = companiesData
+  // Convert new company format to legacy format for compatibility
+  const companyLocations: CompanyLocation[] = companiesData.map(company => ({
+    id: company.id,
+    name: company.name,
+    position: company.position,
+    type: company.type === 'nuclear' || company.type === 'thermal' ? 'energy' : company.type,
+    impactScore: company.impactScore,
+    country: company.country
+  }))
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -83,7 +95,9 @@ const Dashboard = () => {
               <Card className="lg:col-span-2 p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-semibold">Global Impact Map</h3>
-                  <Badge variant="secondary">{enhancedCompanies.length} facilities</Badge>
+                  <Badge variant="secondary">
+                    {globeCompanies.reduce((total, company) => total + (company.places?.length || 0), 0)} locations
+                  </Badge>
                 </div>
                 <div className="h-96">
                   <CesiumGlobe 
@@ -96,16 +110,13 @@ const Dashboard = () => {
               </Card>
 
               {/* Company List Panel */}
-              <div className="space-y-4">
-                <MockCompanyList />
-                <Card className="p-6">
-                  <h3 className="text-lg font-semibold mb-4">Legacy Companies</h3>
-                  <CompanyList 
-                    companies={companyLocations}
-                    onCompanySelect={setSelectedCompany}
-                  />
-                </Card>
-              </div>
+              <Card className="p-6">
+                <h3 className="text-lg font-semibold mb-4">Companies</h3>
+                <CompanyList 
+                  companies={companyLocations}
+                  onCompanySelect={setSelectedCompany}
+                />
+              </Card>
             </div>
           </div>
         );
@@ -196,13 +207,6 @@ const Dashboard = () => {
           />
         )}
 
-        {/* Enhanced Company Report Modal */}
-        {selectedEnhancedCompany && (
-          <CompanyReport
-            company={convertEnhancedToLegacy(selectedEnhancedCompany)}
-            onClose={() => setSelectedEnhancedCompany(null)}
-          />
-        )}
       </div>
     </SidebarProvider>
   );

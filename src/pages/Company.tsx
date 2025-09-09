@@ -5,46 +5,30 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft, Download, Share2, Satellite, MapPin, Building2 } from 'lucide-react'
 
-import { getCompanyById } from '@/lib/companies'
-import { getCompanyByMockId, companyIdToIndex, MockCompany } from '@/lib/mockdata-companies'
+import { getCompanyById, Company } from '@/lib/companies'
 import { CompanyAnalysisMap } from '@/components/gee/CompanyAnalysisMap'
 
 export default function CompanyPage() {
   const params = useParams()
   const companyId = params.companyId || ''
   
-  // Try to load from mockdata first, then fallback to old companies
-  const mockCompany = useMemo(() => getCompanyByMockId(companyId), [companyId])
+  // Load company using unified system
   const company = useMemo(() => getCompanyById(companyId), [companyId])
   const navigate = useNavigate()
 
-  // Use mock company if available, otherwise fallback to old company format
-  const activeCompany: MockCompany | null = mockCompany || null
-  const legacyCompany = !mockCompany ? company : null
-
   // Convert company places to location format for the map
   const companyLocations = useMemo(() => {
-    if (activeCompany) {
-      // Use real mockdata places with rectangular coordinates
-      return activeCompany.places.map(place => ({
-        name: place.name,
-        coordinates: place.coordinates, // Already in [tlx, tly, brx, bry] format
-        location: place.location
-      }));
-    } else if (legacyCompany) {
-      // Fallback to legacy company format (convert to rectangle)
-      const [lng, lat] = legacyCompany.position;
-      const size = 0.005;
-      return [{
-        name: `${legacyCompany.name} Primary Site`,
-        coordinates: [lng - size, lat + size, lng + size, lat - size] as [number, number, number, number],
-        location: legacyCompany.country
-      }];
-    }
-    return [];
-  }, [activeCompany, legacyCompany]);
+    if (!company) return [];
+    
+    // Use company places with rectangular coordinates (from real mockdata)
+    return company.places.map(place => ({
+      name: place.name,
+      coordinates: place.coordinates, // Already in [tlx, tly, brx, bry] format
+      location: place.location
+    }));
+  }, [company]);
 
-  if (!activeCompany && !legacyCompany) {
+  if (!company) {
     return (
       <div className="min-h-screen w-full flex bg-background">
         <main className="flex-1 overflow-auto">
@@ -78,7 +62,7 @@ export default function CompanyPage() {
             <span>Companies</span>
             <span>/</span>
             <span className="text-foreground font-medium">
-              {activeCompany?.company || legacyCompany?.name}
+              {company.name}
             </span>
           </div>
           
@@ -86,35 +70,31 @@ export default function CompanyPage() {
           <div className="flex items-center justify-between">
             <div className="space-y-2">
               <h1 className="text-3xl font-bold text-foreground">
-                {activeCompany?.company || legacyCompany?.name}
+                {company.name}
               </h1>
               <div className="flex items-center space-x-4 text-muted-foreground">
                 <div className="flex items-center space-x-1">
                   <MapPin className="h-4 w-4" />
-                  <span>
-                    {activeCompany ? companyLocations[0]?.location || 'Multiple Locations' : legacyCompany?.country}
-                  </span>
+                  <span>{company.country}</span>
                 </div>
                 <div className="flex items-center space-x-1">
                   <Building2 className="h-4 w-4" />
-                  <Badge variant="outline">
-                    {activeCompany?.Industry || legacyCompany?.type}
+                  <Badge variant="outline">{company.industry}</Badge>
+                </div>
+                <div className="flex items-center space-x-1">
+                  <span>Places: </span>
+                  <Badge variant="secondary">{company.places.length}</Badge>
+                </div>
+                <div className="flex items-center space-x-1">
+                  <span>Impact Score: </span>
+                  <Badge variant={company.impactScore > 70 ? 'destructive' : company.impactScore > 40 ? 'secondary' : 'default'}>
+                    {company.impactScore}
                   </Badge>
                 </div>
-                {activeCompany && (
+                {company.marketCap && (
                   <div className="flex items-center space-x-1">
-                    <span>Plants: </span>
-                    <Badge variant="secondary">
-                      {activeCompany['Number of plants'] || companyLocations.length}
-                    </Badge>
-                  </div>
-                )}
-                {legacyCompany && (
-                  <div className="flex items-center space-x-1">
-                    <span>Impact Score: </span>
-                    <Badge variant={legacyCompany.impactScore > 70 ? 'destructive' : legacyCompany.impactScore > 40 ? 'secondary' : 'default'}>
-                      {legacyCompany.impactScore}
-                    </Badge>
+                    <span>Market Cap: </span>
+                    <Badge variant="outline" className="text-xs">{company.marketCap}</Badge>
                   </div>
                 )}
               </div>
@@ -150,7 +130,7 @@ export default function CompanyPage() {
               <div>
                 <h2 className="text-2xl font-bold">Satellite Environmental Analysis</h2>
                 <p className="text-muted-foreground mt-1">
-                  Real-time analysis of {activeCompany?.company || legacyCompany?.name}'s operational areas and environmentally similar regions
+                  Real-time analysis of {company.name}'s operational areas and environmentally similar regions
                 </p>
               </div>
               <Badge variant="secondary" className="text-xs">
@@ -162,7 +142,7 @@ export default function CompanyPage() {
           
           {/* Analysis Map Component */}
           <CompanyAnalysisMap
-            companyName={activeCompany?.company || legacyCompany?.name || 'Unknown Company'}
+            companyName={company.name}
             locations={companyLocations}
             className="max-w-6xl mx-auto"
           />

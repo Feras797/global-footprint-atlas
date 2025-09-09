@@ -9,9 +9,7 @@ export interface CompanyData {
   company: string;
   Industry: string;
   "Market cap": string;
-  Revenue?: {
-    "2023": string;
-  };
+  Revenue?: Record<string, string>; // More flexible revenue structure
   places?: MineLocation[]; // For mockdata.JSON compatibility
   mines?: MineLocation[];  // For src/data/mockdata.json compatibility
 }
