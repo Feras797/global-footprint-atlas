@@ -25,8 +25,11 @@ import { Home, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 // 1. Go to https://cesium.com/ion/signup
 // 2. Create a free account 
 // 3. Get your access token from https://cesium.com/ion/tokens
-// 4. Uncomment the line below and add your token:
-Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJhOTdkN2IxMi0xZWJhLTRjNjUtYjI2MC0xZTE4OTdhZmJhODciLCJpZCI6MzM5NTQ1LCJpYXQiOjE3NTczNjYwNjB9.gYZjtoAS3r9jYVAhv7N1CV2hEwyGTd39oyMgXVP3Gm4';
+// 4. Add your token to the .env file as VITE_CESIUM_ION_ACCESS_TOKEN
+const cesiumAccessToken = import.meta.env.VITE_CESIUM_ION_ACCESS_TOKEN;
+if (cesiumAccessToken) {
+  Cesium.Ion.defaultAccessToken = cesiumAccessToken;
+}
 
 export const CesiumGlobe: React.FC<CesiumGlobeProps> = ({
   companies,

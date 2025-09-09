@@ -559,8 +559,8 @@ ${prompt.outputFormat}
 
     // Real Gemini API call through Firebase Functions (falls back to local for dev)
     const apiUrl = process.env.NODE_ENV === 'production' 
-      ? '/api/gemini'  // Firebase Functions endpoint
-      : 'http://localhost:3001/api/gemini'; // Local development
+      ? (import.meta.env.VITE_API_URL_PRODUCTION || '/api/gemini')  // Firebase Functions endpoint
+      : (import.meta.env.VITE_API_URL || 'http://localhost:3001') + '/api/gemini'; // Local development
     
     console.log('🔗 Making Gemini API request to:', apiUrl);
     
