@@ -25,7 +25,7 @@ interface CompanyLocation {
   country: string;
 }
 
-export type DashboardView = 'overview' | 'companies' | 'regions' | 'analysis' | 'reports' | 'settings';
+export type DashboardView = 'overview' | 'companies' | 'regions' | 'reports' | 'settings';
 
 const Dashboard = () => {
   const [activeView, setActiveView] = useState<DashboardView>('overview');
@@ -73,7 +73,7 @@ const Dashboard = () => {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const view = params.get('view') as DashboardView | null
-    if (view && ['overview','companies','regions','analysis','reports','settings'].includes(view)) {
+    if (view && ['overview','companies','regions','reports','settings'].includes(view)) {
       setActiveView(view)
     }
   }, [])
@@ -138,36 +138,6 @@ const Dashboard = () => {
 
       case 'regions':
         return <RegionAnalyzer />;
-
-      case 'analysis':
-        return (
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-2xl font-bold">Satellite Analysis</h2>
-                <p className="text-muted-foreground mt-1">
-                  Environmental analysis is now available on individual company pages
-                </p>
-              </div>
-              <Badge variant="secondary" className="text-xs">
-                Available on Company Pages
-              </Badge>
-            </div>
-            
-            <Card className="p-8 text-center">
-              <div className="space-y-4">
-                <div className="text-6xl">🛰️</div>
-                <h3 className="text-xl font-semibold">Analysis Available on Company Pages</h3>
-                <p className="text-muted-foreground max-w-md mx-auto">
-                  Visit any company page to see real-time satellite analysis with red company areas and green similar regions.
-                </p>
-                <Button onClick={() => setActiveView('companies')} className="mt-4">
-                  View Companies
-                </Button>
-              </div>
-            </Card>
-          </div>
-        );
 
       default:
         return (

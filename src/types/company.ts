@@ -3,7 +3,7 @@ export interface CompanyLocation {
   id: string;
   name: string;
   position: [number, number, number];
-  type: 'manufacturing' | 'mining' | 'agriculture' | 'energy';
+  type: 'manufacturing' | 'mining' | 'agriculture' | 'energy' | 'nuclear' | 'thermal';
   impactScore: number;
   country: string;
 }
