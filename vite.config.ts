@@ -13,10 +13,7 @@ export default defineConfig(({ mode }) => ({
   },
   plugins: [
     react(),
-    viteCommonjs({
-      // Transform CommonJS modules to ES modules
-      transformMixedEsModules: true
-    }),
+    viteCommonjs(),
     cesium({
       // Latest 2025 configuration
       cesiumBaseUrl: "cesium",

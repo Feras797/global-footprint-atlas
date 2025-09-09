@@ -4,13 +4,14 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
 import { AlertCircle, Loader2, MapPin } from 'lucide-react';
 
 // Google Maps API key
 const GOOGLE_MAPS_API_KEY = 'AIzaSyDxCaV_ArUKahmWNSsO2OVni3dUoPSqfPI';
 
-// API endpoint placeholder
-const ANALYSIS_API_ENDPOINT = 'https://api.your-backend.com/analyze-area';
+// Real similarity analysis API
+const SIMILARITY_API_BASE = 'https://similar1-370308594166.europe-west1.run.app/similarity/top3';
 
 interface CompanyLocation {
   name: string;
@@ -22,26 +23,133 @@ interface AnalysisMapProps {
   companyName: string;
   locations: CompanyLocation[];
   className?: string;
+  onAnalysisComplete?: (redAreas: any[], greenAreas: any[]) => void;
+  onAnalysisPerformed?: () => void;
 }
 
 interface SimilarArea {
-  coordinates: [number, number, number, number]; // [tlx, tly, brx, bry]
+  bbox: [number, number, number, number]; // [minLng, minLat, maxLng, maxLat] 
   similarity: number;
+  rank: number;
+  index: number;
+  position: string;
+  belongsToRedBox: number; // Index of the red box this green area belongs to
+  features: {
+    ndvi_mean: number;
+    ndvi_std: number;
+    elevation_mean: number;
+    elevation_std: number;
+    slope_mean: number;
+    slope_std: number;
+    ndwi_mean: number;
+    ndbi_mean: number;
+    landcover_diversity: number;
+  };
 }
 
-interface AnalysisResponse {
-  top_3: [
-    [number, number, number, number],
-    [number, number, number, number], 
-    [number, number, number, number]
-  ];
-  similarity: [number, number, number];
+// Real API response structure
+interface RealApiResponse {
+  status: string;
+  timestamp: string;
+  config: {
+    reference_bbox: [number, number, number, number];
+    start_date: string;
+    end_date: string;
+    search_radius_km: number;
+    sampling_resolution_m: number;
+    max_candidates: number;
+    similarity_threshold: number;
+    weights: {
+      ndvi: number;
+      elevation: number;
+      slope: number;
+      landcover: number;
+    };
+  };
+  reference: {
+    bbox: [number, number, number, number];
+  };
+  candidates_generated: number;
+  top_matches: {
+    rank: number;
+    index: number;
+    position: string;
+    similarity: number;
+    bbox: [number, number, number, number];
+    features: {
+      ndvi_mean: number;
+      ndvi_std: number;
+      elevation_mean: number;
+      elevation_std: number;
+      slope_mean: number;
+      slope_std: number;
+      ndwi_mean: number;
+      ndbi_mean: number;
+      landcover_diversity: number;
+    };
+  }[];
 }
+
+/**
+ * Transform coordinates from [tlx, tly, brx, bry] to API format and build URL
+ */
+const buildSimilarityApiUrl = (coordinates: [number, number, number, number]): string => {
+  const [tlx, tly, brx, bry] = coordinates;
+  
+  // Convert to minLng, minLat, maxLng, maxLat format
+  const minLng = Math.min(tlx, brx);
+  const maxLng = Math.max(tlx, brx);
+  const minLat = Math.min(tly, bry);
+  const maxLat = Math.max(tly, bry);
+  
+  const params = new URLSearchParams({
+    reference_bbox: `${minLng},${minLat},${maxLng},${maxLat}`,
+    start_date: '2022-01-01',
+    end_date: '2023-12-31',
+    search_radius_km: '400',
+    sampling_resolution_m: '25000',
+    max_candidates: '20',
+    similarity_threshold: '0.5',
+    'weights.ndvi': '0.4',
+    'weights.elevation': '0.2',
+    'weights.slope': '0.2',
+    'weights.landcover': '0.2'
+  });
+  
+  return `${SIMILARITY_API_BASE}?${params.toString()}`;
+};
+
+/**
+ * Parse real API response and convert to internal SimilarArea format
+ */
+const parseRealApiResponse = (apiResponse: RealApiResponse, redBoxIndex: number): SimilarArea[] => {
+  return apiResponse.top_matches.map(match => {
+    console.log(`🔄 Converting Rank ${match.rank} for Red Box ${redBoxIndex}:`, {
+      position: match.position,
+      bbox: match.bbox,
+      similarity: match.similarity,
+      features: match.features
+    });
+    
+    return {
+      bbox: match.bbox,
+      similarity: match.similarity,
+      rank: match.rank,
+      index: match.index,
+      position: match.position,
+      belongsToRedBox: redBoxIndex,
+      features: match.features
+    };
+  });
+};
+
 
 export const CompanyAnalysisMap: React.FC<AnalysisMapProps> = ({
   companyName,
   locations,
-  className = ''
+  className = '',
+  onAnalysisComplete,
+  onAnalysisPerformed
 }) => {
   // Refs
   const mapContainer = useRef<HTMLDivElement>(null);
@@ -55,6 +163,13 @@ export const CompanyAnalysisMap: React.FC<AnalysisMapProps> = ({
   const [totalApiRequests, setTotalApiRequests] = useState(0);
   const [similarAreas, setSimilarAreas] = useState<SimilarArea[]>([]);
   const [isAnalysisEnabled, setIsAnalysisEnabled] = useState(false);
+  const [selectedArea, setSelectedArea] = useState<{
+    type: 'company' | 'similar';
+    data: any;
+  } | null>(null);
+  const [selectedRedBoxIndex, setSelectedRedBoxIndex] = useState<number | null>(null);
+  const [batchAnalysisData, setBatchAnalysisData] = useState<any>(null);
+  const [isAnalysisInProgress, setIsAnalysisInProgress] = useState(false);
 
   /**
    * Initialize Google Maps
@@ -106,13 +221,16 @@ export const CompanyAnalysisMap: React.FC<AnalysisMapProps> = ({
   const createCompanySquares = async () => {
     if (!mapInstance.current || locations.length === 0) return;
 
+    console.log(`🎯 Starting analysis for ${locations.length} company locations`);
     setTotalApiRequests(locations.length);
     setApiRequestsCompleted(0);
+    setIsAnalysisEnabled(false); // Reset analysis button
+    setSimilarAreas([]); // Clear previous green areas
     
     const newRectangles: google.maps.Rectangle[] = [];
 
-    for (const location of locations) {
-      // Use the rectangular coordinates directly from mockdata
+    // Create all red rectangles first
+    locations.forEach((location, locationIndex) => {
       const [tlx, tly, brx, bry] = location.coordinates;
       
       const bounds = {
@@ -136,9 +254,14 @@ export const CompanyAnalysisMap: React.FC<AnalysisMapProps> = ({
       rectangle.setMap(mapInstance.current);
       newRectangles.push(rectangle);
 
-      // Add click handler with location info
+      // Add click handler with location info and red box tracking
       rectangle.addListener('click', () => {
-        console.log('Clicked company location:', location.name);
+        console.log('🔴 Clicked company location:', location.name, 'Index:', locationIndex);
+        setSelectedArea({
+          type: 'company',
+          data: { ...location, redBoxIndex: locationIndex }
+        });
+        setSelectedRedBoxIndex(locationIndex);
       });
 
       // Add hover effects
@@ -149,87 +272,107 @@ export const CompanyAnalysisMap: React.FC<AnalysisMapProps> = ({
       rectangle.addListener('mouseout', () => {
         rectangle.setOptions({ fillOpacity: 0.3, strokeWeight: 3 });
       });
-
-      // Make API call for similar areas using the location's coordinates
-      await fetchSimilarAreas([tlx, tly, brx, bry]); // [tlx, tly, brx, bry]
-    }
+    });
 
     setRectangles(newRectangles);
+
+    // Make concurrent API calls for all locations
+    console.log('🚀 Starting concurrent API calls for all red boxes...');
+    const apiPromises = locations.map((location, locationIndex) => 
+      fetchSimilarAreas([...location.coordinates], locationIndex)
+    );
+
+    // Don't await all - let them complete individually and update UI progressively
+    apiPromises.forEach((promise, index) => {
+      promise.catch(error => {
+        console.error(`❌ API call failed for location ${index}:`, error);
+      });
+    });
   };
 
   /**
-   * Fetch similar areas from backend API
+   * Fetch similar areas from real similarity API
    */
-  const fetchSimilarAreas = async (coordinates: [number, number, number, number]) => {
+  const fetchSimilarAreas = async (coordinates: [number, number, number, number], redBoxIndex: number) => {
     try {
-      console.log('📡 Requesting similar areas for coordinates:', coordinates);
+      const apiUrl = buildSimilarityApiUrl(coordinates);
+      console.log(`📡 Requesting similar areas for Red Box ${redBoxIndex}, coordinates:`, coordinates);
+      console.log('🔗 Using real API URL:', apiUrl);
       
-      const response = await fetch(ANALYSIS_API_ENDPOINT, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ coordinates }),
+      const response = await fetch(apiUrl, {
+        method: 'GET',
+        // No additional headers needed for GET request
       });
 
+      console.log(`📡 Response status for Red Box ${redBoxIndex}:`, response.status, response.statusText);
+
       if (!response.ok) {
-        throw new Error(`API request failed: ${response.status}`);
+        throw new Error(`API request failed: ${response.status} ${response.statusText}`);
       }
 
-      const data: AnalysisResponse = await response.json();
+      const data = await response.json();
+      console.log(`📥 Raw API response for Red Box ${redBoxIndex}:`, data);
+      console.log('📊 Response status:', data.status);
+      console.log('📊 Top matches count:', data.top_matches ? data.top_matches.length : 'undefined');
       
-      // Convert response to SimilarArea format
-      const newSimilarAreas: SimilarArea[] = data.top_3.map((coords, index) => ({
-        coordinates: coords,
-        similarity: data.similarity[index]
-      }));
+      let newSimilarAreas: SimilarArea[] = [];
+      
+      // Check if it's the real API format
+      if (data.status === 'success' && data.top_matches && Array.isArray(data.top_matches)) {
+        console.log(`🔄 Processing real API format with top_matches for Red Box ${redBoxIndex}`);
+        try {
+          newSimilarAreas = parseRealApiResponse(data as RealApiResponse, redBoxIndex);
+          console.log(`✅ Successfully parsed ${newSimilarAreas.length} similar areas for Red Box ${redBoxIndex}`);
+        } catch (parseError) {
+          console.error('❌ Error during parsing:', parseError);
+          throw parseError;
+        }
+      } else {
+        console.error('❌ Invalid response format:', { status: data.status, hasTopMatches: !!data.top_matches, isArray: Array.isArray(data.top_matches) });
+        throw new Error(`Unrecognized API response format. Expected 'status: success' and 'top_matches' array.`);
+      }
 
-      setSimilarAreas(prev => [...prev, ...newSimilarAreas]);
+      console.log(`✅ Parsed similar areas for Red Box ${redBoxIndex}:`, newSimilarAreas);
+      console.log(`🟢 API call successful - received ${newSimilarAreas.length} green areas for Red Box ${redBoxIndex}`);
+      
+      setSimilarAreas(prev => {
+        const updated = [...prev, ...newSimilarAreas];
+        console.log('📈 Total similar areas now:', updated.length);
+        
+        // Enable analysis button as soon as we have first green areas
+        if (prev.length === 0 && newSimilarAreas.length > 0) {
+          console.log('🎯 First green areas received - enabling analysis button early!');
+          setIsAnalysisEnabled(true);
+        }
+        
+        return updated;
+      });
       
     } catch (error) {
-      console.warn('⚠️ API request failed, using mock data for demo:', error);
-      // For now, create mock similar areas for demo
-      createMockSimilarAreas(coordinates);
+      console.error(`❌ Real API request failed for Red Box ${redBoxIndex}:`, error);
+      
+      // Enhanced error logging for different types of failures
+      if (error instanceof TypeError) {
+        console.error('🚫 CORS Error: The similarity API may not allow cross-origin requests from this domain');
+        console.error('🔧 Potential solution: API needs to add CORS headers for http://localhost:8080');
+      } else if (error instanceof Error) {
+        console.error('📄 Error details:', error.message);
+      }
+      
+      console.log(`❌ No green boxes will be shown for Red Box ${redBoxIndex} - real API unavailable`);
+      // No fallback to mock data - real API only
     } finally {
       setApiRequestsCompleted(prev => {
         const newCount = prev + 1;
-        if (newCount === totalApiRequests) {
-          setIsAnalysisEnabled(true);
-        }
+        console.log(`🔢 API requests: ${newCount}/${totalApiRequests} completed`);
         return newCount;
       });
     }
   };
 
-  /**
-   * Create mock similar areas for demo (until API is ready)
-   */
-  const createMockSimilarAreas = (baseCoords: [number, number, number, number]) => {
-    const [tlx, tly, brx, bry] = baseCoords;
-    const centerLng = (tlx + brx) / 2;
-    const centerLat = (tly + bry) / 2;
-    
-    // Generate 3 mock similar areas around the base coordinates
-    const mockAreas: SimilarArea[] = [
-      {
-        coordinates: [centerLng + 0.02, centerLat + 0.01, centerLng + 0.03, centerLat],
-        similarity: 0.95
-      },
-      {
-        coordinates: [centerLng - 0.03, centerLat + 0.02, centerLng - 0.02, centerLat + 0.01],
-        similarity: 0.87
-      },
-      {
-        coordinates: [centerLng + 0.01, centerLat - 0.02, centerLng + 0.02, centerLat - 0.01],
-        similarity: 0.76
-      }
-    ];
-
-    setSimilarAreas(prev => [...prev, ...mockAreas]);
-  };
 
   /**
-   * Plot green squares for similar areas
+   * Plot green squares for similar areas with color coding
    */
   const plotGreenSquares = () => {
     if (!mapInstance.current) return;
@@ -241,18 +384,23 @@ export const CompanyAnalysisMap: React.FC<AnalysisMapProps> = ({
     const greenRectangles: google.maps.Rectangle[] = [];
 
     similarAreas.forEach((area, index) => {
-      const [tlx, tly, brx, bry] = area.coordinates;
+      const [minLng, minLat, maxLng, maxLat] = area.bbox;
+      
+      // Color coding: yellowish for selected red box's green areas, regular green for others
+      const isFromSelectedRedBox = selectedRedBoxIndex !== null && area.belongsToRedBox === selectedRedBoxIndex;
+      const fillColor = isFromSelectedRedBox ? '#eab308' : '#22c55e'; // Yellow vs Green
+      const strokeColor = isFromSelectedRedBox ? '#ca8a04' : '#16a34a'; // Darker yellow vs Darker green
       
       const rectangle = new google.maps.Rectangle({
         bounds: {
-          north: tly,
-          south: bry,
-          east: brx,
-          west: tlx
+          north: maxLat,
+          south: minLat,
+          east: maxLng,
+          west: minLng
         },
-        fillColor: '#22c55e',
+        fillColor,
         fillOpacity: 0.3,
-        strokeColor: '#16a34a',
+        strokeColor,
         strokeOpacity: 0.8,
         strokeWeight: 3,
         clickable: true,
@@ -261,9 +409,14 @@ export const CompanyAnalysisMap: React.FC<AnalysisMapProps> = ({
       rectangle.setMap(mapInstance.current);
       greenRectangles.push(rectangle);
 
-      // Add click handler
+      // Add click handler with enhanced info
       rectangle.addListener('click', () => {
-        console.log(`Clicked similar area ${index + 1}, similarity: ${area.similarity}`);
+        console.log(`🟢 Clicked similar area: Position ${area.position} (Rank ${area.rank}) from Red Box ${area.belongsToRedBox}, similarity: ${(area.similarity * 100).toFixed(1)}%`);
+        console.log('📊 Environmental features:', area.features);
+        setSelectedArea({
+          type: 'similar',
+          data: area
+        });
       });
 
       // Add hover effects
@@ -295,100 +448,370 @@ export const CompanyAnalysisMap: React.FC<AnalysisMapProps> = ({
     initialize();
   }, [locations]);
 
+  // Track if we've already called onAnalysisComplete to prevent infinite loops
+  const [hasNotifiedCompletion, setHasNotifiedCompletion] = useState(false);
+
   // Plot green squares when similar areas are updated
   useEffect(() => {
-    if (similarAreas.length > 0 && apiRequestsCompleted === totalApiRequests) {
+    if (similarAreas.length > 0) {
       plotGreenSquares();
+      
+      // Notify parent component that analysis is complete (only once)
+      if (onAnalysisComplete && !hasNotifiedCompletion && apiRequestsCompleted === totalApiRequests) {
+        const redAreasData = locations.map((location, index) => ({
+          ...location,
+          environmentalData: null // Company areas don't have environmental features yet
+        }));
+        
+        const greenAreasData = similarAreas.map((area, index) => ({
+          name: `Area ${area.position}`,
+          coordinates: area.bbox,
+          location: 'Environmentally Similar Region',
+          similarity: area.similarity,
+          rank: area.rank,
+          environmentalData: area.features
+        }));
+        
+        onAnalysisComplete(redAreasData, greenAreasData);
+        setHasNotifiedCompletion(true);
+      }
     }
-  }, [similarAreas, apiRequestsCompleted, totalApiRequests]);
+  }, [similarAreas, selectedRedBoxIndex, apiRequestsCompleted, totalApiRequests, onAnalysisComplete, locations, hasNotifiedCompletion]);
 
-  const handlePerformAnalysis = () => {
-    console.log('🔬 Performing detailed analysis for all areas...');
-    // This will trigger the detailed analysis API call later
+  const handlePerformAnalysis = async () => {
+    console.log('🔬 Performing comprehensive batch analysis...');
+    console.log('📊 Analysis data:', {
+      redAreas: locations.length,
+      greenAreas: similarAreas.length,
+      totalAreas: locations.length + similarAreas.length
+    });
+    
+    try {
+      setIsAnalysisInProgress(true);
+      console.log('📡 Calling real industrial analysis API...');
+      
+      // We need to make separate requests for each red area with its 3 greens
+      const allBatchResults = [];
+      
+      for (let i = 0; i < locations.length; i++) {
+        const redArea = locations[i];
+        // Get 3 green areas for this red area (filter by belongsToRedBox)
+        const greenAreasForThisRed = similarAreas.filter(green => green.belongsToRedBox === i);
+        
+        if (greenAreasForThisRed.length !== 3) {
+          console.warn(`⚠️ Red area ${i} has ${greenAreasForThisRed.length} green areas, expected 3`);
+        }
+        
+        // Transform coordinates: [tlx, tly, brx, bry] -> [minLon, minLat, maxLon, maxLat]
+        const rectangles = [];
+        const rectangle_names = [];
+        
+        // Add red area (company location)
+        const [tlx, tly, brx, bry] = redArea.coordinates;
+        const minLon = Math.min(tlx, brx);
+        const maxLon = Math.max(tlx, brx);
+        const minLat = Math.min(tly, bry);
+        const maxLat = Math.max(tly, bry);
+        
+        rectangles.push([minLon, minLat, maxLon, maxLat]);
+        rectangle_names.push(redArea.name);
+        
+        // Add green areas (similar areas)
+        greenAreasForThisRed.forEach((green, index) => {
+          const [minLng, minLat, maxLng, maxLat] = green.bbox;
+          rectangles.push([minLng, minLat, maxLng, maxLat]);
+          rectangle_names.push(`Similar_Area_${index + 1}`);
+        });
+        
+        console.log(`📊 Request ${i + 1}/${locations.length}:`, {
+          rectangles,
+          rectangle_names
+        });
+        
+        const requestPayload = {
+          rectangles,
+          rectangle_names,
+          start_date: "2022-01-01",
+          end_date: "2023-12-31",
+          temporal_resolution: "quarterly",
+          thresholds: {
+            vegetation_loss: -0.2,
+            dust_level: 0.15,
+            thermal_anomaly: 50,
+            soil_exposure: 0.3,
+            night_light_increase: 0.5
+          }
+        };
+        
+        const response = await fetch('https://weather-370308594166.europe-west1.run.app/analysis/industrial', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(requestPayload)
+        });
+        
+        if (!response.ok) {
+          throw new Error(`API request ${i + 1} failed: ${response.status} ${response.statusText}`);
+        }
+        
+        const batchResult = await response.json();
+        console.log(`✅ Request ${i + 1} response:`, batchResult);
+        allBatchResults.push(batchResult);
+      }
+      
+      // Combine all batch results
+      const combinedAnalysisData = {
+        status: "success",
+        timestamp: new Date().toISOString(),
+        total_requests: allBatchResults.length,
+        batch_results: allBatchResults,
+        combined_summary: {
+          total_areas_analyzed: allBatchResults.reduce((sum, result) => sum + (result.summary?.areas_analyzed || 0), 0),
+          total_periods: allBatchResults[0]?.summary?.total_periods_analyzed || 8,
+          total_anomalies: allBatchResults.reduce((sum, result) => sum + (result.anomaly_summary?.total_anomalies || 0), 0),
+          total_requests: allBatchResults.length
+        }
+      };
+      
+      console.log('✅ All batch analysis requests completed:', combinedAnalysisData);
+      
+      // Store the comprehensive analysis data
+      setBatchAnalysisData(combinedAnalysisData);
+      
+      // Call the callback to notify parent that analysis was performed
+      if (onAnalysisPerformed) {
+        onAnalysisPerformed();
+      }
+      
+      // Show success message with key metrics
+      alert(`🎉 Real API Analysis Complete!\n\n` +
+            `📊 Requests Made: ${combinedAnalysisData.total_requests}\n` +
+            `📊 Total Areas: ${combinedAnalysisData.combined_summary.total_areas_analyzed}\n` +
+            `📈 Time Periods: ${combinedAnalysisData.combined_summary.total_periods} quarters\n` +
+            `🚨 Total Anomalies: ${combinedAnalysisData.combined_summary.total_anomalies}\n\n` +
+            `Real environmental data loaded successfully!`);
+      
+    } catch (error) {
+      console.error('❌ Batch analysis failed:', error);
+      alert(`❌ Analysis Failed\n\nError: ${error.message}\n\nPlease try again or check the server connection.`);
+    } finally {
+      setIsAnalysisInProgress(false);
+    }
   };
+
 
   return (
     <div className={`space-y-4 ${className}`}>
-      {/* Map Container with Fixed Height */}
-      <Card className="p-0 overflow-hidden">
-        <div className="p-4 border-b border-border">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="font-semibold">Environmental Analysis Map</h3>
-              <p className="text-sm text-muted-foreground">
-                {companyName} operational areas and similar regions
-              </p>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Badge variant="outline" className="text-xs">
-                <MapPin className="h-3 w-3 mr-1" />
-                {locations.length} location{locations.length !== 1 ? 's' : ''}
-              </Badge>
-              {apiRequestsCompleted > 0 && (
-                <Badge variant="secondary" className="text-xs">
-                  {apiRequestsCompleted}/{totalApiRequests} areas analyzed
-                </Badge>
-              )}
-            </div>
-          </div>
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="font-semibold">Environmental Analysis Map</h3>
+          <p className="text-sm text-muted-foreground">
+            {companyName} operational areas and similar regions
+          </p>
         </div>
-        
-        {/* Fixed Height Map Container */}
-        <div className="relative">
-          <div ref={mapContainer} className="h-[500px] w-full" />
+        <div className="flex items-center space-x-2">
+          <Badge variant="outline" className="text-xs">
+            <MapPin className="h-3 w-3 mr-1" />
+            {locations.length} location{locations.length !== 1 ? 's' : ''}
+          </Badge>
+          {apiRequestsCompleted > 0 && (
+            <Badge variant="secondary" className="text-xs">
+              {apiRequestsCompleted}/{totalApiRequests} areas analyzed
+            </Badge>
+          )}
+        </div>
+      </div>
+
+      {/* Main Content: Map (75%) + Info Panel (25%) */}
+      <div className="flex gap-4 h-[600px]">
+        {/* Map Container - 75% width */}
+        <Card className="flex-[3] p-0 overflow-hidden">
+          <div className="relative h-full">
+            <div ref={mapContainer} className="h-full w-full" />
           
-          {/* Loading Overlay */}
-          {isLoading && (
-            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-              <Card className="p-4">
-                <div className="flex items-center space-x-3">
-                  <Loader2 className="h-5 w-5 animate-spin text-primary" />
-                  <div>
-                    <p className="font-medium">Loading Map...</p>
-                    <p className="text-xs text-muted-foreground">
-                      Initializing satellite view and company locations
-                    </p>
+            {/* Loading Overlay */}
+            {isLoading && (
+              <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                <Card className="p-4">
+                  <div className="flex items-center space-x-3">
+                    <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                    <div>
+                      <p className="font-medium">Loading Map...</p>
+                      <p className="text-xs text-muted-foreground">
+                        Initializing satellite view and company locations
+                      </p>
+                    </div>
                   </div>
-                </div>
-              </Card>
-            </div>
-          )}
+                </Card>
+              </div>
+            )}
 
-          {/* Error Display */}
-          {error && (
-            <div className="absolute top-4 left-4 right-4">
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            </div>
-          )}
+            {/* Error Display */}
+            {error && (
+              <div className="absolute top-4 left-4 right-4">
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              </div>
+            )}
 
-          {/* API Progress Display */}
-          {!isLoading && totalApiRequests > 0 && apiRequestsCompleted < totalApiRequests && (
-            <div className="absolute top-4 left-4">
-              <Card className="p-3 bg-background/90 backdrop-blur-sm">
+            {/* API Progress Display */}
+            {!isLoading && totalApiRequests > 0 && apiRequestsCompleted < totalApiRequests && (
+              <div className="absolute top-4 left-4 right-4">
+                <Card className="p-4 bg-background/90 backdrop-blur-sm">
+                  <div className="space-y-3">
+                    <div className="flex items-center space-x-2">
+                      <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                      <span className="text-sm font-medium">
+                        Finding similar areas... {apiRequestsCompleted}/{totalApiRequests}
+                      </span>
+                    </div>
+                    <Progress 
+                      value={(apiRequestsCompleted / totalApiRequests) * 100} 
+                      className="w-full h-2" 
+                    />
+                    <div className="text-xs text-muted-foreground">
+                      {similarAreas.length} green areas found so far
+                    </div>
+                  </div>
+                </Card>
+              </div>
+            )}
+          </div>
+        </Card>
+
+        {/* Info Panel - 25% width */}
+        <Card className="flex-1 p-4 overflow-auto">
+          <div className="h-full">
+            {selectedArea ? (
+              <div className="space-y-4">
                 <div className="flex items-center space-x-2">
-                  <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                  <span className="text-sm">
-                    Finding similar areas... {apiRequestsCompleted}/{totalApiRequests}
-                  </span>
+                  <div className={`w-3 h-3 rounded ${selectedArea.type === 'company' ? 'bg-red-500' : 'bg-green-500'}`}></div>
+                  <h4 className="font-semibold">
+                    {selectedArea.type === 'company' ? 'Company Area' : 'Similar Area'}
+                  </h4>
                 </div>
-              </Card>
-            </div>
-          )}
-        </div>
-      </Card>
+                
+                {selectedArea.type === 'similar' && (
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium">Position:</span>
+                      <Badge variant="outline">{selectedArea.data.position}</Badge>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium">Rank:</span>
+                      <Badge variant="secondary">#{selectedArea.data.rank}</Badge>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium">Similar to:</span>
+                      <Badge variant="outline" className="text-xs">
+                        Red Box {selectedArea.data.belongsToRedBox + 1}
+                      </Badge>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium">Similarity:</span>
+                      <span className="text-sm font-mono">{(selectedArea.data.similarity * 100).toFixed(1)}%</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium">Center:</span>
+                      <span className="text-xs font-mono">
+                        {(() => {
+                          const [minLng, minLat, maxLng, maxLat] = selectedArea.data.bbox;
+                          const centerLng = ((minLng + maxLng) / 2).toFixed(4);
+                          const centerLat = ((minLat + maxLat) / 2).toFixed(4);
+                          return `${centerLat}°, ${centerLng}°`;
+                        })()}
+                      </span>
+                    </div>
+                    
+                    <div className="border-t pt-3">
+                      <h5 className="font-medium text-sm mb-2">Environmental Features</h5>
+                      <div className="space-y-2 text-xs">
+                        <div className="flex justify-between">
+                          <span>NDVI (vegetation):</span>
+                          <span className="font-mono">{selectedArea.data.features.ndvi_mean.toFixed(3)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Elevation:</span>
+                          <span className="font-mono">{selectedArea.data.features.elevation_mean.toFixed(1)}m</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Slope:</span>
+                          <span className="font-mono">{selectedArea.data.features.slope_mean.toFixed(1)}°</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>NDWI (water):</span>
+                          <span className="font-mono">{selectedArea.data.features.ndwi_mean.toFixed(3)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>NDBI (built-up):</span>
+                          <span className="font-mono">{selectedArea.data.features.ndbi_mean.toFixed(3)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Landcover diversity:</span>
+                          <span className="font-mono">{selectedArea.data.features.landcover_diversity} types</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {selectedArea.type === 'company' && (
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium">Name:</span>
+                      <span className="text-sm">{selectedArea.data.name}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium">Location:</span>
+                      <span className="text-sm">{selectedArea.data.location}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium">Center:</span>
+                      <span className="text-xs font-mono">
+                        {(() => {
+                          const [tlx, tly, brx, bry] = selectedArea.data.coordinates;
+                          const centerLng = ((tlx + brx) / 2).toFixed(4);
+                          const centerLat = ((tly + bry) / 2).toFixed(4);
+                          return `${centerLat}°, ${centerLng}°`;
+                        })()}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="flex items-center justify-center h-full text-center">
+                <div>
+                  <MapPin className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <h4 className="font-medium mb-2">Select an Area</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Click on a red (company) or green (similar) area on the map to view detailed information
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        </Card>
+      </div>
 
       {/* Analysis Button */}
       <div className="flex justify-center">
         <Button 
           onClick={handlePerformAnalysis}
-          disabled={!isAnalysisEnabled}
+          disabled={!isAnalysisEnabled || isAnalysisInProgress}
           size="lg"
           className="min-w-[200px]"
         >
-          {isAnalysisEnabled ? (
+          {isAnalysisInProgress ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              Analyzing with Real API...
+            </>
+          ) : isAnalysisEnabled ? (
             <>Perform Analysis</>
           ) : (
             <>

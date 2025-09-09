@@ -90,6 +90,22 @@ const getTypeColor = (type: string) => {
   return colorMap[type as keyof typeof colorMap] || 'bg-gray-100 text-gray-800 border-gray-200'
 }
 
+// Helpers to render impact label badge outside of ImpactIndicator
+const getImpactLevelForScore = (score: number) => {
+  if (score > 70) return { label: 'High Impact', color: 'red' }
+  if (score > 40) return { label: 'Medium Impact', color: 'orange' }
+  return { label: 'Low Impact', color: 'green' }
+}
+
+const getImpactBadgeColor = (color: string) => {
+  const map = {
+    red: 'bg-red-100 text-red-800 border-red-200',
+    orange: 'bg-orange-100 text-orange-800 border-orange-200',
+    green: 'bg-green-100 text-green-800 border-green-200'
+  }
+  return map[color as keyof typeof map] || map.green
+}
+
 // Simple sparkline component
 const Sparkline = ({ className, seed }: { className?: string, seed?: string }) => {
   const points = React.useMemo(() => {
@@ -134,7 +150,10 @@ export const CompanyCard = ({
   className
 }: CompanyCardProps) => {
   const navigate = useNavigate()
-  const trend = React.useMemo(() => generateMockTrend(company.id), [company.id])
+
+  const trend = generateMockTrend()
+  const impactMeta = React.useMemo(() => getImpactLevelForScore(company.impactScore), [company.impactScore])
+
 
   const handleCardClick = () => {
     onSelect(company)
@@ -224,15 +243,24 @@ export const CompanyCard = ({
 
         {/* Content */}
         <div className="grid grid-cols-2 gap-4">
-          {/* Left: Type and Impact inline */}
-          <div className="flex items-center gap-4 flex-wrap">
-            <Badge 
-              variant="outline"
-              className={cn('w-fit text-xs', getTypeColor(company.type))}
-            >
-              {company.type.charAt(0).toUpperCase() + company.type.slice(1)}
-            </Badge>
-            <ImpactIndicator score={company.impactScore} size="md" showLabel={true} />
+
+          {/* Left: Stacked tags to the left of the score */}
+          <div className="flex items-center gap-4">
+            <div className="flex flex-col gap-2">
+              <Badge 
+                variant="outline"
+                className={cn('w-fit text-xs', getTypeColor(company.type))}
+              >
+                {company.type.charAt(0).toUpperCase() + company.type.slice(1)}
+              </Badge>
+              <Badge 
+                variant="outline" 
+                className={cn('w-fit text-xs', getImpactBadgeColor(impactMeta.color))}
+              >
+                {impactMeta.label}
+              </Badge>
+            </div>
+            <ImpactIndicator score={company.impactScore} size="md" showLabel={false} />
           </div>
 
           {/* Right: Trend and Sparkline */}
