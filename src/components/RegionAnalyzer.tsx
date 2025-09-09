@@ -174,12 +174,12 @@ export const RegionAnalyzer = () => {
 
   const getTypeColor = (type: Region['type']) => {
     switch (type) {
-      case 'forest': return 'bg-green-100 text-green-800';
-      case 'agricultural': return 'bg-yellow-100 text-yellow-800';
-      case 'industrial': return 'bg-gray-100 text-gray-800';
-      case 'urban': return 'bg-blue-100 text-blue-800';
-      case 'coastal': return 'bg-cyan-100 text-cyan-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'forest': return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300';
+      case 'agricultural': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300';
+      case 'industrial': return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
+      case 'urban': return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300';
+      case 'coastal': return 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-300';
+      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
     }
   };
 
@@ -198,8 +198,8 @@ export const RegionAnalyzer = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold">Region Analysis</h2>
-          <p className="text-muted-foreground mt-1">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Region Analysis</h2>
+          <p className="text-gray-600 dark:text-gray-400 mt-1">
             Create and analyze custom environmental regions worldwide
           </p>
         </div>
@@ -215,7 +215,7 @@ export const RegionAnalyzer = () => {
       {/* Create Region Form */}
       {showCreateForm && (
         <Card className="p-6 border-primary/20 bg-primary/5">
-          <h3 className="text-lg font-semibold mb-4">Create New Analysis Region</h3>
+          <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">Create New Analysis Region</h3>
           
           {!showMapSelector ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -289,7 +289,7 @@ export const RegionAnalyzer = () => {
                       onChange={(e) => setNewRegion({ ...newRegion, rectangleCoordinates: e.target.value })}
                       className="font-mono text-sm"
                     />
-                    <p className="text-xs text-muted-foreground mt-1">
+                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
                       Format: [longitude_top_left, latitude_top_left, longitude_bottom_right, latitude_bottom_right]
                     </p>
                   </div>
@@ -322,7 +322,7 @@ export const RegionAnalyzer = () => {
           ) : (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h4 className="text-md font-medium">Select Region on Map</h4>
+                <h4 className="text-md font-medium text-gray-900 dark:text-gray-100">Select Region on Map</h4>
                 <Button 
                   type="button"
                   variant="outline"
@@ -333,7 +333,7 @@ export const RegionAnalyzer = () => {
                 </Button>
               </div>
               
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
                 Click and drag on the map to draw a rectangle over your region of interest. The coordinates and area will be automatically calculated.
               </p>
               
@@ -344,25 +344,25 @@ export const RegionAnalyzer = () => {
               
               {newRegion.lat && newRegion.lng && (
                 <div className="p-4 bg-muted rounded-lg">
-                  <h5 className="font-medium mb-2">Selected Region</h5>
+                  <h5 className="font-medium mb-2 text-gray-900 dark:text-gray-100">Selected Region</h5>
                   <div className="space-y-3 text-sm">
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <span className="text-muted-foreground">Center: </span>
-                        <span className="font-mono">{parseFloat(newRegion.lat).toFixed(6)}, {parseFloat(newRegion.lng).toFixed(6)}</span>
+                        <span className="text-gray-700 dark:text-gray-300">Center: </span>
+                        <span className="font-mono text-gray-900 dark:text-gray-100">{parseFloat(newRegion.lat).toFixed(6)}, {parseFloat(newRegion.lng).toFixed(6)}</span>
                       </div>
                       <div>
-                        <span className="text-muted-foreground">Area: </span>
-                        <span>{newRegion.area} km²</span>
+                        <span className="text-gray-700 dark:text-gray-300">Area: </span>
+                        <span className="text-gray-900 dark:text-gray-100">{newRegion.area} km²</span>
                       </div>
                     </div>
                     {newRegion.rectangleCoordinates && (
                       <div>
-                        <span className="text-muted-foreground">Rectangle Coordinates: </span>
-                        <div className="font-mono text-xs mt-1 p-2 bg-background rounded border">
+                        <span className="text-gray-700 dark:text-gray-300">Rectangle Coordinates: </span>
+                        <div className="font-mono text-xs mt-1 p-2 bg-background rounded border text-gray-900 dark:text-gray-100">
                           {newRegion.rectangleCoordinates}
                         </div>
-                        <div className="text-xs text-muted-foreground mt-1">
+                        <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
                           [lng_top_left, lat_top_left, lng_bottom_right, lat_bottom_right]
                         </div>
                       </div>
@@ -415,10 +415,10 @@ export const RegionAnalyzer = () => {
               {/* Header */}
               <div className="flex items-start justify-between">
                 <div>
-                  <h3 className="text-lg font-semibold text-foreground">{region.name}</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{region.name}</h3>
                   <div className="flex items-center space-x-2 mt-1">
-                    <MapPin className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">
+                    <MapPin className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                    <span className="text-sm text-gray-600 dark:text-gray-400">
                       {region.coordinates.lat.toFixed(4)}, {region.coordinates.lng.toFixed(4)}
                     </span>
                   </div>
@@ -445,18 +445,18 @@ export const RegionAnalyzer = () => {
                 </Badge>
                 
                 {region.area > 0 && (
-                  <div className="text-sm text-muted-foreground">
+                  <div className="text-sm text-gray-700 dark:text-gray-300">
                     {region.area.toLocaleString()} km²
                   </div>
                 )}
                 
-                <div className="text-xs text-muted-foreground">
+                <div className="text-xs text-gray-500 dark:text-gray-400">
                   Created {region.createdAt.toLocaleDateString()}
                 </div>
               </div>
 
               {/* Description */}
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
                 {region.description}
               </p>
 
@@ -487,9 +487,9 @@ export const RegionAnalyzer = () => {
 
       {regions.length === 0 && (
         <Card className="p-12 text-center">
-          <MapPin className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-          <h3 className="text-lg font-semibold mb-2">No Regions Created Yet</h3>
-          <p className="text-muted-foreground mb-6">
+          <MapPin className="h-12 w-12 mx-auto mb-4 text-gray-400 dark:text-gray-500" />
+          <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-gray-100">No Regions Created Yet</h3>
+          <p className="text-gray-600 dark:text-gray-400 mb-6">
             Create your first analysis region to start monitoring environmental impact
           </p>
           <Button onClick={() => setShowCreateForm(true)} className="bg-primary hover:bg-primary-glow">

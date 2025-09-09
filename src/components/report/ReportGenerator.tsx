@@ -101,20 +101,18 @@ export const ReportGenerator: React.FC<ReportGeneratorProps> = ({
         <CardContent className="space-y-6">
           {/* Data Status */}
           <div className="grid grid-cols-2 gap-4">
-            <div className="flex items-center space-x-3 p-4 rounded-lg bg-red-50 border border-red-200">
-              <div className="w-4 h-4 bg-red-500 rounded"></div>
+            <div className="p-4 rounded-lg bg-red-700 dark:bg-red-800 border border-red-800 dark:border-red-900">
               <div>
-                <div className="font-medium text-sm">Operational Areas</div>
-                <div className="text-xs text-muted-foreground">
+                <div className="font-medium text-sm text-white">Operational Areas</div>
+                <div className="text-xs text-red-100">
                   {redAreasData.length} areas analyzed
                 </div>
               </div>
             </div>
-            <div className="flex items-center space-x-3 p-4 rounded-lg bg-green-50 border border-green-200">
-              <div className="w-4 h-4 bg-green-500 rounded"></div>
+            <div className="p-4 rounded-lg bg-green-700 dark:bg-green-800 border border-green-800 dark:border-green-900">
               <div>
-                <div className="font-medium text-sm">Reference Areas</div>
-                <div className="text-xs text-muted-foreground">
+                <div className="font-medium text-sm text-white">Reference Areas</div>
+                <div className="text-xs text-green-100">
                   {greenAreasData.length} similar areas found
                 </div>
               </div>
