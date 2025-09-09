@@ -224,15 +224,14 @@ export const CompanyCard = ({
 
         {/* Content */}
         <div className="grid grid-cols-2 gap-4">
-          {/* Left: Type and Impact */}
-          <div className="space-y-3">
+          {/* Left: Type and Impact inline */}
+          <div className="flex items-center gap-4 flex-wrap">
             <Badge 
               variant="outline"
               className={cn('w-fit text-xs', getTypeColor(company.type))}
             >
               {company.type.charAt(0).toUpperCase() + company.type.slice(1)}
             </Badge>
-            
             <ImpactIndicator score={company.impactScore} size="md" showLabel={true} />
           </div>
 
