@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { MapLibreRegionSelector } from "@/components/MapLibreRegionSelector";
+import { EnvironmentalDashboard } from "@/components/environmental/EnvironmentalDashboard";
 import { 
   MapPin, 
   Plus, 
@@ -88,6 +89,7 @@ export const RegionAnalyzer = () => {
 
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showMapSelector, setShowMapSelector] = useState(false);
+  const [analyzingRegion, setAnalyzingRegion] = useState<Region | null>(null);
   const [newRegion, setNewRegion] = useState({
     name: '',
     lat: '',
@@ -166,6 +168,10 @@ export const RegionAnalyzer = () => {
     setRegions(regions.filter(region => region.id !== id));
   };
 
+  const handleAnalyzeRegion = (region: Region) => {
+    setAnalyzingRegion(region);
+  };
+
   const getTypeColor = (type: Region['type']) => {
     switch (type) {
       case 'forest': return 'bg-green-100 text-green-800';
@@ -176,6 +182,16 @@ export const RegionAnalyzer = () => {
       default: return 'bg-gray-100 text-gray-800';
     }
   };
+
+  // Show environmental dashboard if analyzing a region
+  if (analyzingRegion) {
+    return (
+      <EnvironmentalDashboard
+        regionName={analyzingRegion.name}
+        onClose={() => setAnalyzingRegion(null)}
+      />
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -446,7 +462,12 @@ export const RegionAnalyzer = () => {
 
               {/* Actions */}
               <div className="flex space-x-2 pt-2">
-                <Button variant="outline" size="sm" className="flex-1">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="flex-1"
+                  onClick={() => handleAnalyzeRegion(region)}
+                >
                   <BarChart3 className="h-4 w-4 mr-2" />
                   Analyze
                 </Button>

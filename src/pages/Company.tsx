@@ -7,6 +7,7 @@ import { ArrowLeft, Download, Share2, Satellite, MapPin, Building2 } from 'lucid
 
 import { getCompanyById, Company } from '@/lib/companies'
 import { CompanyAnalysisMap } from '@/components/gee/CompanyAnalysisMap'
+import { EnvironmentalDashboard } from '@/components/environmental/EnvironmentalDashboard'
 
 export default function CompanyPage() {
   const params = useParams()
@@ -146,6 +147,14 @@ export default function CompanyPage() {
             locations={companyLocations}
             className="max-w-6xl mx-auto"
           />
+          
+          {/* Environmental Impact Analysis Section */}
+          <div className="mt-12 max-w-6xl mx-auto">
+            <EnvironmentalDashboard
+              regionName={company.name}
+              showCloseButton={false}
+            />
+          </div>
         </div>
       </main>
     </div>
