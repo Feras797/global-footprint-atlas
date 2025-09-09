@@ -41,8 +41,29 @@ export class ReportDataService {
     redAreasData: any[], 
     timeSeriesData?: any[]
   ): AreaAnalysis[] {
+    // If we have actual red areas data from satellite analysis, use it
+    if (redAreasData && redAreasData.length > 0) {
+      console.log('📊 Using actual red areas data from satellite analysis:', redAreasData.length, 'areas');
+      return redAreasData.map((areaData, index) => {
+        // Use the actual environmental data if available
+        const envData = areaData.environmentalData || areaData.features || areaData;
+        
+        return {
+          id: `red_${company.id}_${index}`,
+          name: areaData.name || company.places[index]?.name || `Operational Area ${index + 1}`,
+          type: 'operational',
+          coordinates: areaData.coordinates || company.places[index]?.coordinates || [0, 0, 0, 0],
+          location: areaData.location || company.places[index]?.location || 'Unknown Location',
+          environmentalData: this.processEnvironmentalData(envData),
+          timeSeriesData: this.processTimeSeriesData(timeSeriesData, index, 'red')
+        };
+      });
+    }
+    
+    // Fallback to company places with mock data if no satellite data
+    console.log('⚠️ No satellite analysis data, using company places with mock data');
     return company.places.map((place, index) => {
-      const geeData = redAreasData[index] || this.generateMockGEEData();
+      const geeData = this.generateMockGEEData();
       
       return {
         id: `red_${company.id}_${index}`,
@@ -63,49 +84,83 @@ export class ReportDataService {
     greenAreasData: any[], 
     timeSeriesData?: any[]
   ): AreaAnalysis[] {
-    return greenAreasData.map((areaData, index) => ({
-      id: `green_${index}`,
-      name: areaData.name || `Similar Area ${index + 1}`,
-      type: 'similar',
-      coordinates: areaData.coordinates,
-      location: areaData.location || 'Unknown Location',
-      environmentalData: this.processEnvironmentalData(areaData),
-      similarityScore: areaData.similarity || Math.random() * 0.3 + 0.7, // 0.7-1.0
-      timeSeriesData: this.processTimeSeriesData(timeSeriesData, index, 'green')
-    }));
+    if (!greenAreasData || greenAreasData.length === 0) {
+      console.log('⚠️ No green areas data available, generating mock data');
+      // Generate some mock green areas if none provided
+      return Array.from({ length: 3 }, (_, index) => ({
+        id: `green_${index}`,
+        name: `Similar Area ${index + 1}`,
+        type: 'similar' as const,
+        coordinates: [0, 0, 0, 0] as [number, number, number, number],
+        location: 'Mock Location',
+        environmentalData: this.processEnvironmentalData(this.generateMockGEEData()),
+        similarityScore: Math.random() * 0.3 + 0.7, // 0.7-1.0
+        timeSeriesData: this.processTimeSeriesData(timeSeriesData, index, 'green')
+      }));
+    }
+    
+    console.log('📊 Using actual green areas data from satellite analysis:', greenAreasData.length, 'areas');
+    return greenAreasData.map((areaData, index) => {
+      // Extract environmental data from various possible structures
+      const envData = areaData.environmentalData || areaData.features || areaData;
+      
+      return {
+        id: `green_${index}`,
+        name: areaData.name || `Similar Area ${index + 1}`,
+        type: 'similar' as const,
+        coordinates: areaData.coordinates || areaData.bbox || [0, 0, 0, 0],
+        location: areaData.location || 'Unknown Location',
+        environmentalData: this.processEnvironmentalData(envData),
+        similarityScore: areaData.similarity || areaData.similarityScore || Math.random() * 0.3 + 0.7,
+        timeSeriesData: this.processTimeSeriesData(timeSeriesData, index, 'green')
+      };
+    });
   }
 
   /**
    * Process raw environmental data from GEE into structured format
    */
   private static processEnvironmentalData(geeData: any) {
-    // This would process actual GEE data - currently using enhanced mock data
+    // Handle different data structures from satellite analysis
+    const ndviValue = geeData.ndvi || geeData.ndvi_mean || geeData.NDVI || this.randomFloat(0.2, 0.8);
+    const ndwiValue = geeData.ndwi || geeData.ndwi_mean || geeData.NDWI || this.randomFloat(-0.3, 0.3);
+    const ndbiValue = geeData.ndbi || geeData.ndbi_mean || geeData.NDBI || this.randomFloat(-0.2, 0.2);
+    const elevationValue = geeData.elevation || geeData.elevation_mean || geeData.ELEVATION || this.randomFloat(50, 800);
+    const slopeValue = geeData.slope || geeData.slope_mean || geeData.SLOPE || this.randomFloat(0, 25);
+    
+    console.log('📈 Processing environmental data:', {
+      ndvi: ndviValue,
+      ndwi: ndwiValue,
+      ndbi: ndbiValue,
+      hasActualData: !!(geeData.ndvi || geeData.NDVI || geeData.ndvi_mean)
+    });
+    
     return {
       ndvi: {
-        mean: geeData.ndvi_mean || this.randomFloat(0.2, 0.8),
+        mean: ndviValue,
         std: geeData.ndvi_std || this.randomFloat(0.05, 0.15),
-        interpretation: this.interpretNDVI(geeData.ndvi_mean || 0.5)
+        interpretation: this.interpretNDVI(ndviValue)
       },
       ndwi: {
-        mean: geeData.ndwi_mean || this.randomFloat(-0.3, 0.3),
+        mean: ndwiValue,
         std: geeData.ndwi_std || this.randomFloat(0.05, 0.15),
-        interpretation: this.interpretNDWI(geeData.ndwi_mean || 0)
+        interpretation: this.interpretNDWI(ndwiValue)
       },
       ndbi: {
-        mean: geeData.ndbi_mean || this.randomFloat(-0.2, 0.2),
+        mean: ndbiValue,
         std: geeData.ndbi_std || this.randomFloat(0.05, 0.1),
-        interpretation: this.interpretNDBI(geeData.ndbi_mean || 0)
+        interpretation: this.interpretNDBI(ndbiValue)
       },
       elevation: {
-        mean: geeData.elevation_mean || this.randomFloat(50, 800),
+        mean: elevationValue,
         std: geeData.elevation_std || this.randomFloat(10, 100),
         min: geeData.elevation_min || this.randomFloat(0, 100),
         max: geeData.elevation_max || this.randomFloat(100, 1000)
       },
       slope: {
-        mean: geeData.slope_mean || this.randomFloat(0, 25),
+        mean: slopeValue,
         std: geeData.slope_std || this.randomFloat(1, 8),
-        interpretation: this.interpretSlope(geeData.slope_mean || 5)
+        interpretation: this.interpretSlope(slopeValue)
       },
       temperature: {
         mean: geeData.temperature_mean || this.randomFloat(10, 25),

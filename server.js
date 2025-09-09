@@ -21,9 +21,29 @@ app.post('/api/gemini', async (req, res) => {
   try {
     console.log('🤖 Gemini API request received');
     
-    // Get access token from gcloud (with full path)
-    const { stdout: token } = await execAsync('/Users/ersibesi/google-cloud-sdk/bin/gcloud auth application-default print-access-token');
-    const accessToken = token.trim();
+    // Get access token from gcloud (tries multiple common paths)
+    let accessToken;
+    const gcloudPaths = [
+      'gcloud', // Try system PATH first
+      '/Users/ersibesi/google-cloud-sdk/bin/gcloud',
+      '/usr/local/bin/gcloud',
+      '~/google-cloud-sdk/bin/gcloud'
+    ];
+    
+    for (const gcloudPath of gcloudPaths) {
+      try {
+        const { stdout: token } = await execAsync(`${gcloudPath} auth application-default print-access-token`);
+        accessToken = token.trim();
+        console.log(`✅ Found gcloud at: ${gcloudPath}`);
+        break;
+      } catch (e) {
+        // Try next path
+      }
+    }
+    
+    if (!accessToken) {
+      throw new Error('Could not find gcloud CLI or get access token. Please ensure gcloud is installed and authenticated.');
+    }
     
     console.log('🔑 Got access token');
     

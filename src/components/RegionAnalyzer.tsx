@@ -198,8 +198,8 @@ export const RegionAnalyzer = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Region Analysis</h2>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">
+          <h2 className="text-2xl font-bold text-white">Region Analysis</h2>
+          <p className="text-white/80 mt-1">
             Create and analyze custom environmental regions worldwide
           </p>
         </div>
@@ -410,28 +410,29 @@ export const RegionAnalyzer = () => {
       {/* Regions List */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {regions.map((region) => (
-          <Card key={region.id} className="p-6 hover:shadow-earth transition-all duration-300">
+          <Card key={region.id} className="p-6 hover:shadow-earth transition-all duration-300 bg-gray-800 dark:bg-gray-900 border-gray-700 dark:border-gray-800">
             <div className="space-y-4">
               {/* Header */}
               <div className="flex items-start justify-between">
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{region.name}</h3>
+                  <h3 className="text-lg font-semibold text-white">{region.name}</h3>
                   <div className="flex items-center space-x-2 mt-1">
-                    <MapPin className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-                    <span className="text-sm text-gray-600 dark:text-gray-400">
+                    <MapPin className="h-4 w-4 text-white/80" />
+                    <span className="text-sm text-white/80">
                       {region.coordinates.lat.toFixed(4)}, {region.coordinates.lng.toFixed(4)}
                     </span>
                   </div>
                 </div>
                 
                 <div className="flex space-x-2">
-                  <Button variant="ghost" size="sm">
+                  <Button variant="ghost" size="sm" className="text-white/70 hover:text-white hover:bg-white/10">
                     <Edit className="h-4 w-4" />
                   </Button>
                   <Button 
                     variant="ghost" 
                     size="sm"
                     onClick={() => handleDeleteRegion(region.id)}
+                    className="text-white/70 hover:text-white hover:bg-white/10"
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -445,18 +446,18 @@ export const RegionAnalyzer = () => {
                 </Badge>
                 
                 {region.area > 0 && (
-                  <div className="text-sm text-gray-700 dark:text-gray-300">
+                  <div className="text-sm text-white/90">
                     {region.area.toLocaleString()} km²
                   </div>
                 )}
                 
-                <div className="text-xs text-gray-500 dark:text-gray-400">
+                <div className="text-xs text-white/70">
                   Created {region.createdAt.toLocaleDateString()}
                 </div>
               </div>
 
               {/* Description */}
-              <p className="text-sm text-gray-600 dark:text-gray-400">
+              <p className="text-sm text-white/80">
                 {region.description}
               </p>
 
@@ -465,17 +466,17 @@ export const RegionAnalyzer = () => {
                 <Button 
                   variant="outline" 
                   size="sm" 
-                  className="flex-1"
+                  className="flex-1 text-white border-white/30 hover:bg-white/10 hover:border-white/50"
                   onClick={() => handleAnalyzeRegion(region)}
                 >
                   <BarChart3 className="h-4 w-4 mr-2" />
                   Analyze
                 </Button>
-                <Button variant="outline" size="sm" className="flex-1">
+                <Button variant="outline" size="sm" className="flex-1 text-white border-white/30 hover:bg-white/10 hover:border-white/50">
                   <Globe className="h-4 w-4 mr-2" />
                   View Map
                 </Button>
-                <Button variant="outline" size="sm" className="flex-1">
+                <Button variant="outline" size="sm" className="flex-1 text-white border-white/30 hover:bg-white/10 hover:border-white/50">
                   <Download className="h-4 w-4 mr-2" />
                   Export
                 </Button>
@@ -486,10 +487,10 @@ export const RegionAnalyzer = () => {
       </div>
 
       {regions.length === 0 && (
-        <Card className="p-12 text-center">
-          <MapPin className="h-12 w-12 mx-auto mb-4 text-gray-400 dark:text-gray-500" />
-          <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-gray-100">No Regions Created Yet</h3>
-          <p className="text-gray-600 dark:text-gray-400 mb-6">
+        <Card className="p-12 text-center bg-gray-800 dark:bg-gray-900 border-gray-700 dark:border-gray-800">
+          <MapPin className="h-12 w-12 mx-auto mb-4 text-white/50" />
+          <h3 className="text-lg font-semibold mb-2 text-white">No Regions Created Yet</h3>
+          <p className="text-white/70 mb-6">
             Create your first analysis region to start monitoring environmental impact
           </p>
           <Button onClick={() => setShowCreateForm(true)} className="bg-primary hover:bg-primary-glow">

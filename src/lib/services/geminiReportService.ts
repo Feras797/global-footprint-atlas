@@ -67,24 +67,30 @@ export class GeminiReportService {
       // Process the response and generate PDF
       const reportId = this.generateReportId();
       console.log('📄 Generating PDF with report ID:', reportId);
-      const pdfUrl = await this.generatePDF(geminiResponse, reportData, request);
-      console.log('✅ PDF generated successfully:', pdfUrl);
       
-      const finalResponse = {
-        reportId,
-        status: 'completed' as const,
-        downloadUrl: pdfUrl,
-        preview: geminiResponse.summary || geminiResponse.content.substring(0, 500)
-      };
-      
-      console.log('🎉 Report generation completed successfully:', {
-        reportId: finalResponse.reportId,
-        status: finalResponse.status,
-        previewLength: finalResponse.preview.length,
-        downloadUrl: finalResponse.downloadUrl
-      });
-      
-      return finalResponse;
+      try {
+        const pdfUrl = await this.generatePDF(geminiResponse, reportData, request);
+        console.log('✅ PDF generated successfully:', pdfUrl);
+        
+        const finalResponse = {
+          reportId,
+          status: 'completed' as const,
+          downloadUrl: pdfUrl,
+          preview: geminiResponse.summary || (geminiResponse.content ? geminiResponse.content.substring(0, 500) : 'Report generated successfully')
+        };
+        
+        return finalResponse;
+      } catch (pdfError) {
+        console.error('❌ PDF generation failed:', pdfError);
+        // Return with the content but mark as needing PDF regeneration
+        return {
+          reportId,
+          status: 'completed' as const,
+          downloadUrl: '', // Empty URL indicates PDF generation failed
+          preview: 'Report content generated but PDF creation failed. Please try downloading again.',
+          content: geminiResponse.content // Store the content for retry
+        };
+      }
       
     } catch (error) {
       console.error('❌ Report generation failed:', error);
@@ -114,15 +120,47 @@ export class GeminiReportService {
     request: ReportRequest
   ): GeminiReportPrompt {
     
-    const systemPrompt = `You are an expert environmental data analyst and report writer specializing in satellite-based environmental impact assessment. You have expertise in:
+    // Customize system prompt based on report type
+    const getSystemPrompt = () => {
+      const basePrompt = `You are an expert environmental data analyst and report writer specializing in satellite-based environmental impact assessment. You have expertise in:
 
 - Remote sensing data interpretation (NDVI, NDWI, NDBI, elevation, slope)
 - Environmental impact assessment methodologies
 - Statistical analysis and significance testing
 - Corporate sustainability reporting
-- Technical and executive communication
+- Technical and executive communication`;
+
+      switch (request.reportType) {
+        case 'summary':
+          return `${basePrompt}
+
+For this EXECUTIVE SUMMARY report, focus on:
+- High-level insights and key findings only
+- Business implications and strategic recommendations
+- Clear, non-technical language
+- Concise bullet points and executive-friendly format
+- Maximum 2-3 pages of content`;
+
+        case 'technical':
+          return `${basePrompt}
+
+For this TECHNICAL DEEP-DIVE report, provide:
+- Detailed scientific analysis with methodological rigor
+- Statistical tests and confidence intervals
+- Technical terminology and precise measurements
+- Comprehensive data tables and technical specifications
+- In-depth interpretation of all environmental indices
+- Detailed methodology and uncertainty analysis`;
+
+        case 'comprehensive':
+        default:
+          return `${basePrompt}
 
 Your task is to analyze environmental data comparing operational areas (red zones) with environmentally similar reference areas (green zones) and generate comprehensive insights about environmental impact, risks, and opportunities.`;
+      }
+    };
+    
+    const systemPrompt = getSystemPrompt();
 
     const dataContext = `
 COMPANY INFORMATION:
@@ -143,7 +181,82 @@ METADATA:
 ${JSON.stringify(reportData.metadata, null, 2)}
 `;
 
-    const analysisInstructions = `
+    // Customize analysis instructions based on report type
+    const getAnalysisInstructions = () => {
+      switch (request.reportType) {
+        case 'summary':
+          return `
+EXECUTIVE SUMMARY ANALYSIS REQUIREMENTS:
+
+1. KEY FINDINGS (100-150 words)
+   - Top 3-5 most critical environmental impacts
+   - Primary difference between operational and reference areas
+   - Overall risk level (low/medium/high) with justification
+
+2. BUSINESS IMPLICATIONS (100-150 words)
+   - Operational risks and opportunities
+   - Regulatory compliance considerations
+   - Reputation and stakeholder impacts
+
+3. STRATEGIC RECOMMENDATIONS (100-150 words)
+   - Top 3 actionable recommendations
+   - Expected ROI and timeframes
+   - Quick wins vs long-term initiatives
+
+FOCUS ON:
+- Executive-level language (avoid technical jargon)
+- Clear action items
+- Business value and risk mitigation
+- Concise, impactful statements
+`;
+
+        case 'technical':
+          return `
+TECHNICAL DEEP-DIVE ANALYSIS REQUIREMENTS:
+
+1. METHODOLOGICAL FRAMEWORK
+   - Detailed data collection methodology
+   - Sensor specifications and data quality metrics
+   - Statistical models and assumptions
+   - Uncertainty quantification
+
+2. COMPREHENSIVE ENVIRONMENTAL INDICES ANALYSIS
+   - NDVI: Temporal patterns, statistical distribution, anomaly detection
+   - NDWI: Water stress indicators, seasonal variations
+   - NDBI: Urban heat island quantification, imperviousness metrics
+   - Elevation/Slope: Terrain analysis, erosion susceptibility modeling
+   - Include formulas, calculations, and error margins
+
+3. ADVANCED STATISTICAL ANALYSIS
+   - Multivariate analysis of variance (MANOVA)
+   - Time series decomposition and trend analysis
+   - Spatial autocorrelation tests
+   - Effect sizes with confidence intervals
+   - P-values and statistical power analysis
+
+4. PREDICTIVE MODELING
+   - Environmental degradation projections
+   - Climate change impact scenarios
+   - Risk probability distributions
+   - Monte Carlo simulations for uncertainty
+
+5. DETAILED TECHNICAL RECOMMENDATIONS
+   - Specific remediation technologies
+   - Environmental monitoring protocols
+   - Data collection improvements
+   - Scientific validation methods
+
+FOCUS ON:
+- Technical accuracy and precision
+- Peer-review quality analysis
+- Comprehensive data tables
+- Scientific references and citations
+- Detailed mathematical formulations
+`;
+
+        case 'comprehensive':
+        default:
+          return `
 ANALYSIS REQUIREMENTS:
 
 1. EXECUTIVE SUMMARY (200-300 words)
@@ -191,6 +304,10 @@ FOCUS ON:
 - Clear, non-technical language for executives
 - Technical depth for environmental teams
 `;
+      }
+    };
+
+    const analysisInstructions = getAnalysisInstructions();
 
     const visualizationRequirements = request.includeVisualizations ? `
 VISUALIZATION DESCRIPTIONS:
@@ -229,13 +346,103 @@ For each visualization, provide:
 - Caption and interpretation
 ` : 'No visualizations required.';
 
-    const outputFormat = `
+    // Customize output format based on report type
+    const getOutputFormat = () => {
+      const baseFormat = `# ENVIRONMENTAL IMPACT ASSESSMENT REPORT
+## ${reportData.company.name} - ${reportData.company.industry}
+### Report Type: ${request.reportType === 'summary' ? 'Executive Summary' : request.reportType === 'technical' ? 'Technical Deep-Dive' : 'Comprehensive Analysis'}
+### Generated: ${new Date().toLocaleDateString()}`;
+
+      switch (request.reportType) {
+        case 'summary':
+          return `
+OUTPUT FORMAT FOR EXECUTIVE SUMMARY:
+
+${baseFormat}
+
+### KEY FINDINGS
+[Bullet points with top 3-5 findings, each 1-2 sentences]
+
+### IMPACT ASSESSMENT
+- **Overall Environmental Impact**: [Low/Medium/High]
+- **Primary Concern**: [One sentence]
+- **Opportunity Area**: [One sentence]
+
+### BUSINESS IMPLICATIONS
+[3-4 bullet points, business-focused language]
+
+### RECOMMENDATIONS
+1. **Immediate Action**: [Specific recommendation with timeframe]
+2. **Short-term (3-6 months)**: [Specific recommendation]
+3. **Long-term (12+ months)**: [Strategic initiative]
+
+### NEXT STEPS
+[2-3 concrete action items]
+
+Keep the entire report to 2-3 pages maximum. Use clear, non-technical language.
+`;
+
+        case 'technical':
+          return `
+OUTPUT FORMAT FOR TECHNICAL REPORT:
+
+${baseFormat}
+
+### EXECUTIVE SUMMARY
+[Technical abstract, 200 words]
+
+### METHODOLOGY
+#### Data Acquisition
+- Sensor Specifications: [Details]
+- Temporal Resolution: [Details]
+- Spatial Resolution: ${reportData.metadata.spatial_resolution}
+- Processing Chain: [Details]
+
+#### Statistical Methods
+[Detailed methodology description]
+
+### ENVIRONMENTAL INDICES ANALYSIS
+#### NDVI Analysis
+- Mean: [value ± std]
+- Temporal Trend: [equation]
+- Statistical Significance: [p-value]
+[Include formulas and calculations]
+
+#### NDWI Analysis
+[Similar detailed structure]
+
+#### NDBI Analysis
+[Similar detailed structure]
+
+### STATISTICAL RESULTS
+#### Comparative Statistics
+[Include detailed tables with test statistics, p-values, effect sizes]
+
+#### Time Series Analysis
+[Include decomposition results, trend tests]
+
+### PREDICTIVE MODELING
+[Model specifications, validation metrics, projections]
+
+### TECHNICAL RECOMMENDATIONS
+[Detailed technical solutions with specifications]
+
+### APPENDICES
+A. Data Quality Metrics
+B. Statistical Test Assumptions
+C. Uncertainty Analysis
+
+Include all formulas, technical specifications, and comprehensive data tables.
+`;
+
+        case 'comprehensive':
+        default:
+          return `
 OUTPUT FORMAT:
 
 Provide your analysis in the following structured format:
 
-# ENVIRONMENTAL IMPACT ASSESSMENT REPORT
-## ${reportData.company.name} - ${reportData.company.industry}
+${baseFormat}
 
 ### EXECUTIVE SUMMARY
 [Your executive summary here]
@@ -265,6 +472,10 @@ ${request.includeVisualizations ? '### VISUALIZATION SPECIFICATIONS\n[Detailed v
 
 Use clear headings, bullet points, and data tables where appropriate. Maintain a professional, technical tone while ensuring accessibility for both technical and executive audiences.
 `;
+      }
+    };
+
+    const outputFormat = getOutputFormat();
 
     return {
       systemPrompt,
@@ -280,10 +491,19 @@ Use clear headings, bullet points, and data tables where appropriate. Maintain a
    */
   private static async saveDebugData(filename: string, data: any): Promise<void> {
     try {
+      // Only save debug data in development mode or when explicitly enabled
+      const DEBUG_MODE = process.env.NODE_ENV === 'development' && window.location.search.includes('debug=true');
+      
+      if (!DEBUG_MODE) {
+        // Just log to console in production
+        console.log(`📁 Debug data (${filename}):`, data);
+        return;
+      }
+      
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
       const debugFilename = `gemini-debug-${filename}-${timestamp}.json`;
       
-      // Create a downloadable JSON file
+      // Create a downloadable JSON file only in debug mode
       const jsonString = JSON.stringify(data, null, 2);
       const blob = new Blob([jsonString], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
@@ -297,7 +517,7 @@ Use clear headings, bullet points, and data tables where appropriate. Maintain a
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
       
-      console.log(`📁 Debug data saved to: ${debugFilename}`);
+      console.log(`📁 Debug file saved: ${debugFilename}`);
     } catch (error) {
       console.error('❌ Failed to save debug data:', error);
     }
@@ -476,10 +696,21 @@ ${prompt.outputFormat}
       const jsPDF = (await import('jspdf')).default;
       console.log('✅ jsPDF library loaded successfully');
       
-      const reportContent = geminiResponse.candidates?.[0]?.content?.parts?.[0]?.text || 
-                           geminiResponse.content || 
-                           'Report content not available';
-                           
+      // Handle both Gemini API response format and our processed format
+      let reportContent = '';
+      if (geminiResponse.candidates && geminiResponse.candidates[0]?.content?.parts?.[0]?.text) {
+        // Direct Gemini API response format
+        reportContent = geminiResponse.candidates[0].content.parts[0].text;
+      } else if (geminiResponse.content) {
+        // Our processed format
+        reportContent = geminiResponse.content;
+      } else if (typeof geminiResponse === 'string') {
+        // Direct string response
+        reportContent = geminiResponse;
+      } else {
+        reportContent = 'Report content not available';
+      }
+      
       console.log('📝 Extracted report content:', {
         contentLength: reportContent.length,
         hasContent: !!reportContent,

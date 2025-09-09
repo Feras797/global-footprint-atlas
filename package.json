@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "server": "node server.js",
+    "server:mock": "node server-mock.js",
     "mock-server": "node mock-analysis-server.js",
     "dev:full": "concurrently \"npm run server\" \"npm run dev\"",
     "dev:with-mock": "concurrently \"npm run server\" \"npm run mock-server\" \"npm run dev\"",

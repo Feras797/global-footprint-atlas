@@ -122,8 +122,24 @@ export function useReportGeneration(): UseReportGenerationState & UseReportGener
   const downloadReport = useCallback(async (reportId: string): Promise<void> => {
     try {
       const report = state.reports[reportId];
-      if (!report || !report.downloadUrl) {
-        throw new Error('Report not found or download URL not available');
+      if (!report) {
+        throw new Error('Report not found');
+      }
+      
+      // Check if downloadUrl starts with "downloaded://" which means PDF was generated
+      if (report.downloadUrl && report.downloadUrl.startsWith('downloaded://')) {
+        // PDF was already generated and downloaded automatically
+        const fileName = report.downloadUrl.replace('downloaded://', '');
+        console.log('✅ PDF already downloaded as:', fileName);
+        // Optionally show a message to the user
+        updateState({ 
+          error: `Report already downloaded as: ${fileName}. Check your Downloads folder.` 
+        });
+        return;
+      }
+      
+      if (!report.downloadUrl) {
+        throw new Error('PDF generation failed. Please try generating the report again.');
       }
 
       // Create a temporary anchor element to trigger download
