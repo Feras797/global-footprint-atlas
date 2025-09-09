@@ -165,9 +165,15 @@ export const RegionSimilarityAnalyzer: React.FC<RegionAnalysisProps> = ({
   const [greenAreas, setGreenAreas] = useState<SimilarArea[]>([])
   const [redAreas, setRedAreas] = useState<any[]>([])
   const [analysisCompleted, setAnalysisCompleted] = useState(false)
+  const [batchAnalysisData, setBatchAnalysisData] = useState<any>(null)
+  const [isIndustrialAnalysisInProgress, setIsIndustrialAnalysisInProgress] = useState(false)
+  const [isSimilaritySearchEnabled, setIsSimilaritySearchEnabled] = useState(true)
 
-  // Check if we have region coordinates for analysis
-  const isAnalysisEnabled = region.rectangleCoordinates && region.rectangleCoordinates.length === 4
+  // Check if we have region coordinates for similarity search
+  const isSimilaritySearchReady = region.rectangleCoordinates && region.rectangleCoordinates.length === 4
+  
+  // Check if we can perform industrial analysis (need 1 red + 3 greens)
+  const isIndustrialAnalysisReady = greenAreas.length === 3 && redAreas.length === 1
 
   // Initialize Google Maps (aligned with CompanyAnalysisMap approach)
   useEffect(() => {
@@ -230,7 +236,7 @@ export const RegionSimilarityAnalyzer: React.FC<RegionAnalysisProps> = ({
     initializeGoogleMaps()
   }, [region])
 
-  const performSimilarityAnalysis = async () => {
+  const findSimilarRegions = async () => {
     if (!region.rectangleCoordinates || !isMapLoaded) {
       setError('Region coordinates not available or map not loaded')
       return
@@ -314,18 +320,125 @@ export const RegionSimilarityAnalyzer: React.FC<RegionAnalysisProps> = ({
       }
 
       setAnalysisProgress(100)
-      setStatusMessage('Analysis completed successfully!')
-      setAnalysisCompleted(true)
+      setStatusMessage('Similar regions found! Ready for environmental analysis.')
+      // Don't set analysisCompleted yet - that's only after industrial analysis
+      
+      console.log(`✅ Similar regions found: ${similarAreas.length} areas ready for analysis`)
+      
+      // DON'T trigger final callbacks yet - only after industrial analysis
 
-      // Trigger callbacks (aligned with CompanyAnalysisMap format)
+    } catch (error) {
+      console.error('Analysis failed:', error)
+      setError(error instanceof Error ? error.message : 'Analysis failed')
+      setStatusMessage('Analysis failed')
+    } finally {
+      setIsAnalysisInProgress(false)
+    }
+  }
+
+  // NEW: Industrial analysis function matching CompanyAnalysisMap exactly
+  const performIndustrialAnalysis = async () => {
+    if (greenAreas.length !== 3 || redAreas.length !== 1) {
+      setError('Need exactly 1 red area and 3 green areas for analysis')
+      return
+    }
+
+    console.log('🔬 Performing industrial analysis for custom region...')
+    console.log('📊 Analysis data:', {
+      redAreas: 1,
+      greenAreas: greenAreas.length,
+      totalAreas: 4
+    })
+
+    try {
+      setIsIndustrialAnalysisInProgress(true)
+      console.log('📡 Calling real industrial analysis API...')
+
+      const redArea = redAreas[0]
+      
+      // Transform coordinates to match API format: [minLon, minLat, maxLon, maxLat]
+      const rectangles = []
+      const rectangle_names = []
+      
+      // Add red area (custom region)
+      const [tlx, tly, brx, bry] = redArea.coordinates
+      const minLon = Math.min(tlx, brx)
+      const maxLon = Math.max(tlx, brx)
+      const minLat = Math.min(tly, bry)
+      const maxLat = Math.max(tly, bry)
+      
+      rectangles.push([minLon, minLat, maxLon, maxLat])
+      rectangle_names.push(redArea.name)
+      
+      // Add the 3 green areas (similar areas)
+      greenAreas.forEach((green, index) => {
+        const [minLng, minLat, maxLng, maxLat] = green.bbox
+        rectangles.push([minLng, minLat, maxLng, maxLat])
+        rectangle_names.push(`Similar_Area_${index + 1}`)
+      })
+      
+      console.log('📊 Industrial analysis request:', {
+        rectangles,
+        rectangle_names
+      })
+      
+      const requestPayload = {
+        rectangles,
+        rectangle_names,
+        start_date: "2022-01-01",
+        end_date: "2023-12-31",
+        temporal_resolution: "quarterly",
+        thresholds: {
+          vegetation_loss: -0.2,
+          dust_level: 0.15,
+          thermal_anomaly: 50,
+          soil_exposure: 0.3,
+          night_light_increase: 0.5
+        }
+      }
+      
+      const response = await fetch('https://weather-370308594166.europe-west1.run.app/analysis/industrial', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestPayload)
+      })
+      
+      if (!response.ok) {
+        throw new Error(`Industrial analysis API failed: ${response.status} ${response.statusText}`)
+      }
+      
+      const batchResult = await response.json()
+      console.log('✅ Industrial analysis completed:', batchResult)
+      
+      // Create the analysis data structure matching company format
+      const combinedAnalysisData = {
+        status: "success",
+        timestamp: new Date().toISOString(),
+        total_requests: 1,
+        batch_results: [batchResult],
+        combined_summary: {
+          total_areas_analyzed: batchResult.summary?.areas_analyzed || 4,
+          total_periods: batchResult.summary?.total_periods_analyzed || 8,
+          total_anomalies: batchResult.anomaly_summary?.total_anomalies || 0,
+          total_requests: 1
+        }
+      }
+      
+      // Store the analysis data
+      setBatchAnalysisData(combinedAnalysisData)
+      setAnalysisCompleted(true)
+      
+      // NOW trigger the final callbacks with proper format
       const redAreasData = [{
         name: redArea.name,
         coordinates: redArea.coordinates,
         location: redArea.location,
-        environmentalData: null // Custom regions don't have environmental features yet
+        environmentalData: batchResult // Include the analysis results
       }]
       
-      const greenAreasData = similarAreas.map((area, index) => ({
+      const greenAreasData = greenAreas.map((area, index) => ({
         name: `Area ${area.position}`,
         coordinates: area.bbox,
         location: 'Environmentally Similar Region',
@@ -335,22 +448,15 @@ export const RegionSimilarityAnalyzer: React.FC<RegionAnalysisProps> = ({
       }))
 
       onAnalysisComplete?.(redAreasData, greenAreasData)
-      onAnalysisPerformed?.({
-        redAreas: redAreasData,
-        greenAreas: greenAreasData,
-        apiResponse: apiData,
-        status: "success",
-        timestamp: new Date().toISOString(),
-        total_requests: 1,
-        batch_results: [apiData]
-      })
-
+      onAnalysisPerformed?.(combinedAnalysisData)
+      
+      console.log('🎉 Custom region analysis completed successfully!')
+      
     } catch (error) {
-      console.error('Analysis failed:', error)
-      setError(error instanceof Error ? error.message : 'Analysis failed')
-      setStatusMessage('Analysis failed')
+      console.error('❌ Industrial analysis failed:', error)
+      setError(error instanceof Error ? error.message : 'Industrial analysis failed')
     } finally {
-      setIsAnalysisInProgress(false)
+      setIsIndustrialAnalysisInProgress(false)
     }
   }
 
@@ -429,46 +535,95 @@ export const RegionSimilarityAnalyzer: React.FC<RegionAnalysisProps> = ({
           </Card>
         )}
 
-        {/* Analysis Button */}
+        {/* Step 1: Find Similar Regions */}
         <div className="flex justify-center">
           <Button
-            onClick={performSimilarityAnalysis}
-            disabled={!isAnalysisEnabled || isAnalysisInProgress}
+            onClick={findSimilarRegions}
+            disabled={!isSimilaritySearchReady || isAnalysisInProgress || greenAreas.length === 3}
             size="lg"
             className="min-w-[200px]"
           >
             {isAnalysisInProgress ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Analyzing Region...
+                Finding Similar Regions...
               </>
-            ) : isAnalysisEnabled ? (
-              <>Perform Analysis</>
+            ) : greenAreas.length === 3 ? (
+              <>✓ Similar Regions Found</>
+            ) : isSimilaritySearchReady ? (
+              <>Find Similar Regions</>
             ) : (
               <>Region coordinates required</>
             )}
           </Button>
         </div>
 
-        {/* Results Summary */}
-        {analysisCompleted && (
+        {/* Step 2: Perform Industrial Analysis (only show after green areas found) */}
+        {greenAreas.length === 3 && (
+          <div className="flex justify-center">
+            <Button
+              onClick={performIndustrialAnalysis}
+              disabled={!isIndustrialAnalysisReady || isIndustrialAnalysisInProgress}
+              size="lg"
+              className="min-w-[200px]"
+              variant={analysisCompleted ? "outline" : "default"}
+            >
+              {isIndustrialAnalysisInProgress ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Performing Environmental Analysis...
+                </>
+              ) : analysisCompleted ? (
+                <>✓ Analysis Complete</>
+              ) : (
+                <>Perform Environmental Analysis</>
+              )}
+            </Button>
+          </div>
+        )}
+
+        {/* Progress Summary */}
+        {greenAreas.length > 0 && (
           <Card className="p-4">
-            <h4 className="font-semibold mb-2">Analysis Results</h4>
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <span className="text-muted-foreground">Region Analyzed:</span>
-                <div className="font-medium">1 area ({region.area.toLocaleString()} km²)</div>
+            <h4 className="font-semibold mb-3">Analysis Progress</h4>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm">✓ Custom region defined</span>
+                <Badge variant="outline" className="text-xs">Complete</Badge>
               </div>
-              <div>
-                <span className="text-muted-foreground">Similar Regions Found:</span>
-                <div className="font-medium">{greenAreas.length} areas</div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm">✓ Similar regions found</span>
+                <Badge variant="outline" className="text-xs">{greenAreas.length} areas</Badge>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm">
+                  {analysisCompleted ? '✓' : '⏳'} Environmental analysis
+                </span>
+                <Badge variant={analysisCompleted ? "outline" : "secondary"} className="text-xs">
+                  {analysisCompleted ? 'Complete' : 'Pending'}
+                </Badge>
               </div>
             </div>
-            <div className="mt-2">
-              <span className="text-muted-foreground text-sm">
-                Best Match: {greenAreas[0] ? `${(greenAreas[0].similarity * 100).toFixed(1)}% similarity` : 'N/A'}
-              </span>
-            </div>
+            
+            {analysisCompleted && batchAnalysisData && (
+              <div className="mt-4 pt-3 border-t">
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-muted-foreground">Areas Analyzed:</span>
+                    <div className="font-medium">{batchAnalysisData.combined_summary?.total_areas_analyzed || 4}</div>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Anomalies Found:</span>
+                    <div className="font-medium">{batchAnalysisData.combined_summary?.total_anomalies || 0}</div>
+                  </div>
+                </div>
+                <div className="mt-2">
+                  <span className="text-muted-foreground text-sm">
+                    Best Match: {greenAreas[0] ? `${(greenAreas[0].similarity * 100).toFixed(1)}% similarity` : 'N/A'}
+                  </span>
+                </div>
+              </div>
+            )}
           </Card>
         )}
       </div>
