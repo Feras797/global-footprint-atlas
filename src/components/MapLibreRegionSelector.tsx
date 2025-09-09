@@ -13,6 +13,7 @@ interface SelectedRegion {
     east: number
     west: number
   }
+  rectangleCoordinates: [number, number, number, number] // [lng_top_left, lat_top_left, lng_bottom_right, lat_bottom_right]
   area: number // in square kilometers
 }
 
@@ -39,6 +40,8 @@ export function MapLibreRegionSelector({
   const [isDrawing, setIsDrawing] = useState(false)
   const [mapMode, setMapMode] = useState<MapMode>('navigate')
   const [mapLoaded, setMapLoaded] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [isSearching, setIsSearching] = useState(false)
   
   // Drawing state refs - using refs to avoid stale closures
   const drawingStateRef = useRef({
@@ -95,6 +98,62 @@ export function MapLibreRegionSelector({
       }
     }
   }, [])
+
+  // Handle location search using Nominatim API
+  const handleLocationSearch = useCallback(async () => {
+    if (!searchQuery.trim() || !mapRef.current) return
+    
+    setIsSearching(true)
+    
+    try {
+      // Query Nominatim API (OpenStreetMap's geocoding service)
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(searchQuery)}&format=json&limit=1`
+      )
+      
+      if (!response.ok) throw new Error('Search failed')
+      
+      const data = await response.json()
+      
+      if (data && data.length > 0) {
+        const result = data[0]
+        const lat = parseFloat(result.lat)
+        const lng = parseFloat(result.lon)
+        
+        // Check if result has a bounding box
+        if (result.boundingbox) {
+          const [south, north, west, east] = result.boundingbox.map(parseFloat)
+          
+          // Fit to bounding box if available
+          mapRef.current.fitBounds(
+            [[west, south], [east, north]],
+            { 
+              padding: 50,
+              duration: 1500
+            }
+          )
+        } else {
+          // Otherwise, fly to the coordinates
+          mapRef.current.flyTo({
+            center: [lng, lat],
+            zoom: 14,
+            duration: 1500
+          })
+        }
+        
+        // Clear search after successful navigation
+        setSearchQuery('')
+      } else {
+        // No results found
+        alert('Location not found. Please try a different search term.')
+      }
+    } catch (err) {
+      console.error('Search error:', err)
+      alert('Search failed. Please try again.')
+    } finally {
+      setIsSearching(false)
+    }
+  }, [searchQuery])
 
   useEffect(() => {
     setIsClient(true)
@@ -285,6 +344,7 @@ export function MapLibreRegionSelector({
             lng: (maxLng + minLng) / 2
           },
           bounds,
+          rectangleCoordinates: [minLng, maxLat, maxLng, minLat], // [lng_top_left, lat_top_left, lng_bottom_right, lat_bottom_right]
           area: calculateArea(bounds)
         }
         
@@ -401,45 +461,7 @@ export function MapLibreRegionSelector({
 
   return (
     <div className="w-full space-y-3">
-      {/* Mode Toggle Controls */}
-      <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/50 border rounded-lg">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Map Mode:</span>
-          <div className="flex gap-1 p-1 bg-white dark:bg-gray-800 rounded-lg border">
-            <button
-              onClick={() => handleModeToggle('navigate')}
-              className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
-                mapMode === 'navigate'
-                  ? 'bg-blue-500 text-white'
-                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
-              }`}
-            >
-              <svg className="w-4 h-4 inline-block mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-              </svg>
-              Navigate
-            </button>
-            <button
-              onClick={() => handleModeToggle('select')}
-              className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
-                mapMode === 'select'
-                  ? 'bg-blue-500 text-white'
-                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
-              }`}
-            >
-              <svg className="w-4 h-4 inline-block mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM14 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zM14 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
-              </svg>
-              Select Region
-            </button>
-          </div>
-        </div>
-        <div className="text-xs text-gray-500 dark:text-gray-400">
-          {mapMode === 'navigate' ? 'Click and drag to pan, scroll to zoom' : 'Click and drag to select a region'}
-        </div>
-      </div>
-
-      {/* Instructions based on mode */}
+      {/* Instructions panel */}
       <div className={`p-3 border rounded-lg ${
         mapMode === 'navigate' 
           ? 'bg-gray-50 dark:bg-gray-950/20 border-gray-200 dark:border-gray-800' 
@@ -492,6 +514,75 @@ export function MapLibreRegionSelector({
           </div>
         </div>
       </div>
+      
+      {/* Control bar with mode toggles and search */}
+      <div className="flex gap-2">
+        {/* Mode toggle buttons */}
+        <button
+          onClick={() => handleModeToggle('navigate')}
+          className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
+            mapMode === 'navigate'
+              ? 'bg-blue-500 text-white'
+              : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 border'
+          }`}
+        >
+          <svg className="w-4 h-4 inline-block mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+          </svg>
+          Navigate
+        </button>
+        <button
+          onClick={() => handleModeToggle('select')}
+          className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
+            mapMode === 'select'
+              ? 'bg-blue-500 text-white'
+              : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 border'
+          }`}
+        >
+          <svg className="w-4 h-4 inline-block mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM14 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zM14 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
+          </svg>
+          Select Region
+        </button>
+        
+        {/* Divider */}
+        <div className="w-px bg-gray-300 dark:bg-gray-700 mx-1"></div>
+        
+        {/* Location Search */}
+        <input
+          type="text"
+          placeholder="Search location..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          onKeyPress={(e) => {
+            if (e.key === 'Enter') {
+              handleLocationSearch()
+            }
+          }}
+          className="w-48 px-3 py-1.5 text-xs border rounded bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+          disabled={isSearching}
+        />
+        <button
+          onClick={handleLocationSearch}
+          disabled={isSearching || !searchQuery.trim()}
+          className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
+            isSearching || !searchQuery.trim()
+              ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-600 cursor-not-allowed'
+              : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 border'
+          }`}
+        >
+          {isSearching ? (
+            <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+          ) : (
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          )}
+        </button>
+      </div>
 
       {/* Map Container */}
       <div className="relative">
@@ -511,17 +602,6 @@ export function MapLibreRegionSelector({
             </div>
           </div>
         )}
-        
-        {/* Mode indicator badge */}
-        <div className="absolute top-2 left-2 pointer-events-none">
-          <div className={`px-2 py-1 rounded-full text-xs font-medium shadow-lg ${
-            mapMode === 'select'
-              ? 'bg-blue-500 text-white'
-              : 'bg-gray-700 text-white'
-          }`}>
-            {mapMode === 'select' ? '✏️ Selection' : '🗺️ Navigation'}
-          </div>
-        </div>
       </div>
       
       {/* Selected Region Info */}
@@ -552,12 +632,12 @@ export function MapLibreRegionSelector({
               </div>
             </div>
             <div className="col-span-2">
-              <span className="text-green-600 dark:text-green-400 text-xs uppercase tracking-wide">Bounds:</span>
+              <span className="text-green-600 dark:text-green-400 text-xs uppercase tracking-wide">Rectangle Coordinates:</span>
               <div className="text-green-900 dark:text-green-100 font-mono text-xs mt-1 p-2 bg-white dark:bg-gray-800 rounded">
-                North: {selectedRegion.bounds.north.toFixed(4)}° | 
-                South: {selectedRegion.bounds.south.toFixed(4)}° | 
-                East: {selectedRegion.bounds.east.toFixed(4)}° | 
-                West: {selectedRegion.bounds.west.toFixed(4)}°
+                [{selectedRegion.rectangleCoordinates[0].toFixed(6)}, {selectedRegion.rectangleCoordinates[1].toFixed(6)}, {selectedRegion.rectangleCoordinates[2].toFixed(6)}, {selectedRegion.rectangleCoordinates[3].toFixed(6)}]
+              </div>
+              <div className="text-green-600 dark:text-green-400 text-xs mt-1">
+                [lng_top_left, lat_top_left, lng_bottom_right, lat_bottom_right]
               </div>
             </div>
           </div>

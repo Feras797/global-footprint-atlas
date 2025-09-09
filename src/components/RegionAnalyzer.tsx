@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -26,6 +26,7 @@ interface Region {
     lat: number;
     lng: number;
   };
+  rectangleCoordinates?: [number, number, number, number]; // [lng_top_left, lat_top_left, lng_bottom_right, lat_bottom_right]
   area: number; // in square kilometers
   type: 'urban' | 'forest' | 'agricultural' | 'industrial' | 'coastal';
   description: string;
@@ -33,26 +34,48 @@ interface Region {
 }
 
 export const RegionAnalyzer = () => {
-  const [regions, setRegions] = useState<Region[]>([
-    {
-      id: '1',
-      name: 'Amazon Basin Study Area',
-      coordinates: { lat: -3.4653, lng: -62.2159 },
-      area: 15420,
-      type: 'forest',
-      description: 'Deforestation monitoring region in the central Amazon',
-      createdAt: new Date('2024-01-15')
-    },
-    {
-      id: '2', 
-      name: 'California Agricultural Valley',
-      coordinates: { lat: 36.7783, lng: -119.4179 },
-      area: 8760,
-      type: 'agricultural',
-      description: 'Water usage and soil health analysis in Central Valley',
-      createdAt: new Date('2024-02-20')
+  // Load regions from localStorage on component mount
+  const [regions, setRegions] = useState<Region[]>(() => {
+    const savedRegions = localStorage.getItem('regions');
+    if (savedRegions) {
+      try {
+        const parsed = JSON.parse(savedRegions);
+        // Convert date strings back to Date objects
+        return parsed.map((r: any) => ({
+          ...r,
+          createdAt: new Date(r.createdAt)
+        }));
+      } catch (e) {
+        console.error('Failed to parse saved regions:', e);
+      }
     }
-  ]);
+    // Default regions if nothing in localStorage
+    return [
+      {
+        id: '1',
+        name: 'Amazon Basin Study Area',
+        coordinates: { lat: -3.4653, lng: -62.2159 },
+        area: 15420,
+        type: 'forest',
+        description: 'Deforestation monitoring region in the central Amazon',
+        createdAt: new Date('2024-01-15')
+      },
+      {
+        id: '2', 
+        name: 'California Agricultural Valley',
+        coordinates: { lat: 36.7783, lng: -119.4179 },
+        area: 8760,
+        type: 'agricultural',
+        description: 'Water usage and soil health analysis in Central Valley',
+        createdAt: new Date('2024-02-20')
+      }
+    ];
+  });
+
+  // Save regions to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('regions', JSON.stringify(regions));
+  }, [regions]);
 
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showMapSelector, setShowMapSelector] = useState(false);
@@ -61,6 +84,7 @@ export const RegionAnalyzer = () => {
     lat: '',
     lng: '',
     area: '',
+    rectangleCoordinates: '' as string, // Will store the formatted string
     type: 'forest' as Region['type'],
     description: ''
   });
@@ -68,6 +92,7 @@ export const RegionAnalyzer = () => {
   const handleMapRegionSelect = (selectedRegion: {
     center: { lat: number; lng: number };
     bounds: { north: number; south: number; east: number; west: number };
+    rectangleCoordinates: [number, number, number, number];
     area: number;
   }) => {
     if (selectedRegion.area > 0) {
@@ -75,13 +100,30 @@ export const RegionAnalyzer = () => {
         ...newRegion,
         lat: selectedRegion.center.lat.toFixed(6),
         lng: selectedRegion.center.lng.toFixed(6),
-        area: Math.round(selectedRegion.area).toString()
+        area: Math.round(selectedRegion.area).toString(),
+        rectangleCoordinates: `[${selectedRegion.rectangleCoordinates.map(coord => coord.toFixed(6)).join(', ')}]`
       });
     }
   };
 
   const handleCreateRegion = () => {
-    if (!newRegion.name || !newRegion.lat || !newRegion.lng) return;
+    if (!newRegion.name || !newRegion.lat || !newRegion.lng) {
+      alert('Please fill in the required fields: Region Name, Latitude, and Longitude');
+      return;
+    }
+
+    // Parse rectangle coordinates if they exist
+    let rectangleCoords: [number, number, number, number] | undefined;
+    if (newRegion.rectangleCoordinates) {
+      try {
+        const parsed = JSON.parse(newRegion.rectangleCoordinates);
+        if (Array.isArray(parsed) && parsed.length === 4) {
+          rectangleCoords = parsed as [number, number, number, number];
+        }
+      } catch (e) {
+        console.warn('Could not parse rectangle coordinates:', e);
+      }
+    }
 
     const region: Region = {
       id: Date.now().toString(),
@@ -90,18 +132,20 @@ export const RegionAnalyzer = () => {
         lat: parseFloat(newRegion.lat),
         lng: parseFloat(newRegion.lng)
       },
+      rectangleCoordinates: rectangleCoords,
       area: parseFloat(newRegion.area) || 0,
       type: newRegion.type,
       description: newRegion.description,
       createdAt: new Date()
     };
-
+    
     setRegions([...regions, region]);
     setNewRegion({
       name: '',
       lat: '',
       lng: '',
       area: '',
+      rectangleCoordinates: '',
       type: 'forest',
       description: ''
     });
@@ -208,6 +252,23 @@ export const RegionAnalyzer = () => {
                     </Select>
                   </div>
                 </div>
+
+                {/* Rectangle Coordinates Field */}
+                {newRegion.rectangleCoordinates && (
+                  <div>
+                    <Label htmlFor="rectangle-coords">Rectangle Coordinates</Label>
+                    <Input
+                      id="rectangle-coords"
+                      placeholder="[lng_top_left, lat_top_left, lng_bottom_right, lat_bottom_right]"
+                      value={newRegion.rectangleCoordinates}
+                      onChange={(e) => setNewRegion({ ...newRegion, rectangleCoordinates: e.target.value })}
+                      className="font-mono text-sm"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Format: [longitude_top_left, latitude_top_left, longitude_bottom_right, latitude_bottom_right]
+                    </p>
+                  </div>
+                )}
                 
                 <div className="pt-4">
                   <Button 
@@ -259,21 +320,39 @@ export const RegionAnalyzer = () => {
               {newRegion.lat && newRegion.lng && (
                 <div className="p-4 bg-muted rounded-lg">
                   <h5 className="font-medium mb-2">Selected Region</h5>
-                  <div className="grid grid-cols-3 gap-4 text-sm">
-                    <div>
-                      <span className="text-muted-foreground">Center: </span>
-                      <span>{parseFloat(newRegion.lat).toFixed(4)}, {parseFloat(newRegion.lng).toFixed(4)}</span>
+                  <div className="space-y-3 text-sm">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <span className="text-muted-foreground">Center: </span>
+                        <span className="font-mono">{parseFloat(newRegion.lat).toFixed(6)}, {parseFloat(newRegion.lng).toFixed(6)}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Area: </span>
+                        <span>{newRegion.area} km²</span>
+                      </div>
                     </div>
-                    <div>
-                      <span className="text-muted-foreground">Area: </span>
-                      <span>{newRegion.area} km²</span>
-                    </div>
-                    <div>
+                    {newRegion.rectangleCoordinates && (
+                      <div>
+                        <span className="text-muted-foreground">Rectangle Coordinates: </span>
+                        <div className="font-mono text-xs mt-1 p-2 bg-background rounded border">
+                          {newRegion.rectangleCoordinates}
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-1">
+                          [lng_top_left, lat_top_left, lng_bottom_right, lat_bottom_right]
+                        </div>
+                      </div>
+                    )}
+                    <div className="flex justify-end space-x-3 mt-4">
                       <Button 
-                        type="button"
-                        variant="outline"
-                        size="sm"
+                        variant="outline" 
                         onClick={() => setShowMapSelector(false)}
+                        className="border-red-500 text-red-600 dark:text-red-400 hover:bg-red-500 hover:text-white hover:border-red-500 transition-colors"
+                      >
+                        Cancel
+                      </Button>
+                      <Button 
+                        onClick={() => setShowMapSelector(false)} 
+                        className="bg-blue-500 hover:bg-blue-600 text-white"
                       >
                         Continue
                       </Button>
@@ -284,15 +363,22 @@ export const RegionAnalyzer = () => {
             </div>
           )}
 
-          <div className="flex justify-end space-x-3 mt-6">
-            <Button variant="outline" onClick={() => setShowCreateForm(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleCreateRegion} className="bg-primary hover:bg-primary-glow">
-              <MapPin className="h-4 w-4 mr-2" />
-              Create Region
-            </Button>
-          </div>
+          {!showMapSelector && (
+            <div className="flex justify-end space-x-3 mt-6">
+              <Button 
+                variant="outline" 
+                onClick={() => setShowCreateForm(false)}
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleCreateRegion} 
+                className="bg-blue-500 hover:bg-blue-600 text-white"
+              >
+                Save Region
+              </Button>
+            </div>
+          )}
         </Card>
       )}
 
