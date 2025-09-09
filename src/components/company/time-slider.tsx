@@ -104,94 +104,10 @@ export const TimeSlider: React.FC<TimeSliderProps> = ({
 
   return (
     <Card className="p-6">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center space-x-3">
-          <Calendar className="h-5 w-5 text-muted-foreground" />
-          <div>
-            <h3 className="font-semibold text-foreground">Time Range Analysis</h3>
-            <p className="text-sm text-muted-foreground">
-              Select period for environmental impact analysis
-            </p>
-          </div>
-        </div>
-        
-        <div className="flex items-center space-x-2">
-          <Badge variant="outline" className="text-xs">
-            {getDuration()}
-          </Badge>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={resetToFullRange}
-            className="h-8"
-          >
-            <RotateCcw className="h-4 w-4 mr-1" />
-            Reset
-          </Button>
-        </div>
-      </div>
+     
 
-      {/* Preset Ranges */}
-      {presetRanges.length > 0 && (
-        <div className="mb-6">
-          <div className="text-sm text-muted-foreground mb-3">Quick select:</div>
-          <div className="flex flex-wrap gap-2">
-            {presetRanges.map((preset, index) => (
-              <Button
-                key={index}
-                variant="outline"
-                size="sm"
-                onClick={() => handlePresetSelect(preset)}
-                className={cn(
-                  "h-8 text-xs",
-                  selectedRange[0].getTime() === preset.range[0].getTime() &&
-                  selectedRange[1].getTime() === preset.range[1].getTime() &&
-                  "bg-primary/10 border-primary text-primary"
-                )}
-              >
-                {preset.label}
-              </Button>
-            ))}
-          </div>
-        </div>
-      )}
 
-      {/* Main Slider */}
-      <div className="space-y-4">
-        <div className="px-3">
-          <Slider
-            value={sliderValues}
-            onValueChange={handleSliderChange}
-            min={minTimestamp}
-            max={maxTimestamp}
-            step={86400000} // 1 day in milliseconds
-            className="w-full"
-          />
-        </div>
-
-        {/* Date Display */}
-        <div className="flex items-center justify-between text-sm">
-          <div className="text-muted-foreground">
-            {minDate.toLocaleDateString('en-US', { 
-              month: 'short', 
-              day: 'numeric', 
-              year: 'numeric' 
-            })}
-          </div>
-          <div className="font-medium text-foreground text-center px-4">
-            {formatDateRange(selectedRange[0], selectedRange[1])}
-          </div>
-          <div className="text-muted-foreground">
-            {maxDate.toLocaleDateString('en-US', { 
-              month: 'short', 
-              day: 'numeric', 
-              year: 'numeric' 
-            })}
-          </div>
-        </div>
-      </div>
-
+ 
       {/* Controls */}
       <div className="flex items-center justify-center space-x-2 mt-6 pt-4 border-t border-border/50">
         <Button

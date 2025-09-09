@@ -49,16 +49,18 @@ export const AnalysisChart: React.FC<AnalysisChartProps> = ({
 }) => {
   const filteredData = useMemo(() => {
     const [startDate, endDate] = selectedTimeRange
-    return metric.data.filter(point => {
-      const pointDate = new Date(point.date)
+    
+    const filtered = metric.data.filter(point => {
+      // Use timestamp for filtering since date is period string like "2022-Q1"
+      const pointDate = new Date(point.timestamp)
       return pointDate >= startDate && pointDate <= endDate
     }).map(point => ({
       ...point,
-      date: new Date(point.date).toLocaleDateString('en-US', { 
-        month: 'short', 
-        day: 'numeric' 
-      })
+      // Keep the original period string for display (e.g., "2022-Q1")
+      displayDate: point.date
     }))
+    
+    return filtered
   }, [metric.data, selectedTimeRange])
 
   const getTrendIcon = () => {
@@ -139,6 +141,18 @@ export const AnalysisChart: React.FC<AnalysisChartProps> = ({
   }
 
   const renderChart = () => {
+    // Don't render if no data
+    if (!filteredData || filteredData.length === 0) {
+      return (
+        <div className="flex items-center justify-center h-full text-muted-foreground">
+          <div className="text-center">
+            <div className="text-sm">No data available for selected time range</div>
+            <div className="text-xs mt-1">Try adjusting the time range</div>
+          </div>
+        </div>
+      )
+    }
+    
     const commonProps = {
       data: filteredData,
       margin: { top: 20, right: 30, left: 20, bottom: 20 }
@@ -149,7 +163,7 @@ export const AnalysisChart: React.FC<AnalysisChartProps> = ({
         return (
           <AreaChart {...commonProps}>
             <CartesianGrid strokeDasharray="3 3" stroke={COLORS.grid} />
-            <XAxis dataKey="date" stroke={COLORS.text} fontSize={12} />
+            <XAxis dataKey="displayDate" stroke={COLORS.text} fontSize={12} />
             <YAxis stroke={COLORS.text} fontSize={12} />
             <Tooltip content={<CustomTooltip />} />
             {showComparison && (
@@ -205,7 +219,7 @@ export const AnalysisChart: React.FC<AnalysisChartProps> = ({
         return (
           <LineChart {...commonProps}>
             <CartesianGrid strokeDasharray="3 3" stroke={COLORS.grid} />
-            <XAxis dataKey="date" stroke={COLORS.text} fontSize={12} />
+            <XAxis dataKey="displayDate" stroke={COLORS.text} fontSize={12} />
             <YAxis stroke={COLORS.text} fontSize={12} />
             <Tooltip content={<CustomTooltip />} />
             {showComparison && (
@@ -260,7 +274,7 @@ export const AnalysisChart: React.FC<AnalysisChartProps> = ({
         return (
           <BarChart {...commonProps}>
             <CartesianGrid strokeDasharray="3 3" stroke={COLORS.grid} />
-            <XAxis dataKey="date" stroke={COLORS.text} fontSize={12} />
+            <XAxis dataKey="displayDate" stroke={COLORS.text} fontSize={12} />
             <YAxis stroke={COLORS.text} fontSize={12} />
             <Tooltip content={<CustomTooltip />} />
             {showComparison && (
@@ -284,7 +298,7 @@ export const AnalysisChart: React.FC<AnalysisChartProps> = ({
         return (
           <ComposedChart {...commonProps}>
             <CartesianGrid strokeDasharray="3 3" stroke={COLORS.grid} />
-            <XAxis dataKey="date" stroke={COLORS.text} fontSize={12} />
+            <XAxis dataKey="displayDate" stroke={COLORS.text} fontSize={12} />
             <YAxis stroke={COLORS.text} fontSize={12} />
             <Tooltip content={<CustomTooltip />} />
             {showComparison && (

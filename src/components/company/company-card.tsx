@@ -33,10 +33,24 @@ interface CompanyCardProps {
   variant?: 'default' | 'compact' | 'detailed'
   showActions?: boolean
   className?: string
+  realAnalysisData?: {
+    trend: {
+      direction: 'up' | 'down' | 'stable'
+      value: number
+      period: string
+    }
+    sparklineData?: number[]
+  }
 }
 
 // Deterministic pseudo-random helpers for stable mock data per company
 const hashStringToSeed = (str: string) => {
+  // Safety check to prevent errors if str is undefined/null
+  if (!str || typeof str !== 'string') {
+    console.warn('hashStringToSeed received invalid input:', str)
+    return 12345 // fallback seed
+  }
+  
   let hash = 2166136261
   for (let i = 0; i < str.length; i++) {
     hash ^= str.charCodeAt(i)
@@ -107,14 +121,23 @@ const getImpactBadgeColor = (color: string) => {
 }
 
 // Simple sparkline component
-const Sparkline = ({ className, seed }: { className?: string, seed?: string }) => {
+const Sparkline = ({ className, seed, realData }: { 
+  className?: string, 
+  seed?: string,
+  realData?: number[]
+}) => {
   const points = React.useMemo(() => {
+    // Use real data if available, otherwise fall back to seeded random data
+    if (realData && realData.length > 0) {
+      return realData.slice(0, 12) // Take first 12 points
+    }
+    
     const rng = seed ? createSeededRandom(hashStringToSeed(seed)) : null
     return Array.from({ length: 12 }, () => {
       const r = rng ? rng() : Math.random()
       return r * 40 + 10
     })
-  }, [seed])
+  }, [seed, realData])
   const maxValue = Math.max(...points)
   const minValue = Math.min(...points)
   const range = maxValue - minValue || 1
@@ -147,11 +170,12 @@ export const CompanyCard = ({
   onSelect,
   variant = 'default',
   showActions = true,
-  className
+  className,
+  realAnalysisData
 }: CompanyCardProps) => {
   const navigate = useNavigate()
 
-  const trend = generateMockTrend()
+  const trend = realAnalysisData?.trend || generateMockTrend(company.id)
   const impactMeta = React.useMemo(() => getImpactLevelForScore(company.impactScore), [company.impactScore])
 
 
@@ -274,7 +298,11 @@ export const CompanyCard = ({
             </div>
             
             <div className="flex justify-end">
-              <Sparkline className="opacity-70 group-hover:opacity-100 transition-opacity" seed={company.id} />
+              <Sparkline 
+                className="opacity-70 group-hover:opacity-100 transition-opacity" 
+                seed={company.id}
+                realData={realAnalysisData?.sparklineData}
+              />
             </div>
           </div>
         </div>

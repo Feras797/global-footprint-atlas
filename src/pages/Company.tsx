@@ -5,13 +5,11 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
-import { ArrowLeft, Download, Share2, Satellite, MapPin, Building2, FileText, Brain } from 'lucide-react'
+import { ArrowLeft, Download, Share2, Satellite, MapPin, Building2, FileText, Brain, BarChart3 } from 'lucide-react'
 
 import { getCompanyById, Company } from '@/lib/companies'
 import { CompanyAnalysisMap } from '@/components/gee/CompanyAnalysisMap'
-
-import { EnvironmentalDashboard } from '@/components/environmental/EnvironmentalDashboard'
-
+import { RealDataVisualization } from '@/components/company/RealDataVisualization'
 import { ReportGenerator } from '@/components/report/ReportGenerator'
 
 
@@ -23,6 +21,7 @@ export default function CompanyPage() {
     redAreas: any[];
     greenAreas: any[];
   }>({ redAreas: [], greenAreas: [] })
+  const [batchAnalysisData, setBatchAnalysisData] = useState<any>(null)
   const [analysisCompleted, setAnalysisCompleted] = useState(false)
   
   // Load company using unified system
@@ -31,10 +30,10 @@ export default function CompanyPage() {
 
   // Reset analysis state when company changes
   useMemo(() => {
-    console.log('🔄 Company changed, resetting analysis state for:', companyId);
     setAnalysisCompleted(false);
-    setActiveTab('analysis'); // Force back to analysis tab
+    setActiveTab('analysis');
     setAnalysisData({ redAreas: [], greenAreas: [] });
+    setBatchAnalysisData(null);
   }, [companyId]);
 
   // Convert company places to location format for the map
@@ -162,15 +161,30 @@ export default function CompanyPage() {
           </div>
           
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            <TabsList className="grid w-full grid-cols-2">
-              {/* Debug info - remove in production */}
-              <div className="absolute -top-8 left-0 text-xs text-muted-foreground">
-                Debug: analysisCompleted = {analysisCompleted ? 'true' : 'false'}
-              </div>
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="analysis" className="flex items-center gap-2">
                 <Satellite className="h-4 w-4" />
                 Satellite Analysis
               </TabsTrigger>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <TabsTrigger 
+                      value="visualization" 
+                      disabled={!analysisCompleted}
+                      className="flex items-center gap-2"
+                    >
+                      <BarChart3 className="h-4 w-4" />
+                      Data Visualization
+                    </TabsTrigger>
+                  </TooltipTrigger>
+                  {!analysisCompleted && (
+                    <TooltipContent>
+                      <p>Complete satellite analysis first</p>
+                    </TooltipContent>
+                  )}
+                </Tooltip>
+              </TooltipProvider>
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -209,11 +223,27 @@ export default function CompanyPage() {
                   setAnalysisData({ redAreas, greenAreas });
                   // Don't set analysisCompleted here - this just means green areas were fetched
                 }}
-                onAnalysisPerformed={() => {
-                  // This should be called when "Perform Analysis" button is actually clicked
-                  console.log('🎯 Analysis performed - enabling AI Reports tab');
+                onAnalysisPerformed={(batchData) => {
+                  setBatchAnalysisData(batchData);
                   setAnalysisCompleted(true);
+                  setActiveTab('visualization'); // Auto-switch to visualization tab
                 }}
+              />
+            </TabsContent>
+
+            <TabsContent value="visualization" className="space-y-6">
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold mb-2">Environmental Data Visualization</h3>
+                <p className="text-muted-foreground text-sm">
+                  Interactive charts and graphs showing environmental metrics over time with comparison to similar regions
+                </p>
+              </div>
+              
+              {/* Real Data Visualization Component */}
+              <RealDataVisualization
+                batchAnalysisData={batchAnalysisData}
+                companyName={company.name}
+                className="max-w-6xl mx-auto"
               />
             </TabsContent>
 

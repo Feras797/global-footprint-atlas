@@ -24,7 +24,7 @@ interface AnalysisMapProps {
   locations: CompanyLocation[];
   className?: string;
   onAnalysisComplete?: (redAreas: any[], greenAreas: any[]) => void;
-  onAnalysisPerformed?: () => void;
+  onAnalysisPerformed?: (batchAnalysisData?: any) => void;
 }
 
 interface SimilarArea {
@@ -74,7 +74,7 @@ interface RealApiResponse {
     rank: number;
     index: number;
     position: string;
-    similarity: number;
+  similarity: number;
     bbox: [number, number, number, number];
     features: {
       ndvi_mean: number;
@@ -478,6 +478,29 @@ export const CompanyAnalysisMap: React.FC<AnalysisMapProps> = ({
     }
   }, [similarAreas, selectedRedBoxIndex, apiRequestsCompleted, totalApiRequests, onAnalysisComplete, locations, hasNotifiedCompletion]);
 
+  // Helper function to save response to JSON file
+  const saveResponseToFile = (data: any) => {
+    try {
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const filename = `real-api-response-${timestamp}.json`;
+      const jsonString = JSON.stringify(data, null, 2);
+      const blob = new Blob([jsonString], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      console.log(`💾 Real API response saved to: ${filename}`);
+    } catch (error) {
+      console.error('❌ Failed to save response to file:', error);
+    }
+  };
+
   const handlePerformAnalysis = async () => {
     console.log('🔬 Performing comprehensive batch analysis...');
     console.log('📊 Analysis data:', {
@@ -556,7 +579,6 @@ export const CompanyAnalysisMap: React.FC<AnalysisMapProps> = ({
         }
         
         const batchResult = await response.json();
-        console.log(`✅ Request ${i + 1} response:`, batchResult);
         allBatchResults.push(batchResult);
       }
       
@@ -574,23 +596,20 @@ export const CompanyAnalysisMap: React.FC<AnalysisMapProps> = ({
         }
       };
       
-      console.log('✅ All batch analysis requests completed:', combinedAnalysisData);
+      // Analysis completed successfully
       
       // Store the comprehensive analysis data
       setBatchAnalysisData(combinedAnalysisData);
       
       // Call the callback to notify parent that analysis was performed
       if (onAnalysisPerformed) {
-        onAnalysisPerformed();
+        onAnalysisPerformed(combinedAnalysisData);
       }
       
-      // Show success message with key metrics
-      alert(`🎉 Real API Analysis Complete!\n\n` +
-            `📊 Requests Made: ${combinedAnalysisData.total_requests}\n` +
-            `📊 Total Areas: ${combinedAnalysisData.combined_summary.total_areas_analyzed}\n` +
-            `📈 Time Periods: ${combinedAnalysisData.combined_summary.total_periods} quarters\n` +
-            `🚨 Total Anomalies: ${combinedAnalysisData.combined_summary.total_anomalies}\n\n` +
-            `Real environmental data loaded successfully!`);
+      // Save full response to JSON file for analysis
+      saveResponseToFile(combinedAnalysisData);
+      
+      // Real API Analysis completed successfully
       
     } catch (error) {
       console.error('❌ Batch analysis failed:', error);
@@ -604,26 +623,26 @@ export const CompanyAnalysisMap: React.FC<AnalysisMapProps> = ({
   return (
     <div className={`space-y-4 ${className}`}>
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="font-semibold">Environmental Analysis Map</h3>
-          <p className="text-sm text-muted-foreground">
-            {companyName} operational areas and similar regions
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-semibold">Environmental Analysis Map</h3>
+              <p className="text-sm text-muted-foreground">
+                {companyName} operational areas and similar regions
+              </p>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Badge variant="outline" className="text-xs">
+                <MapPin className="h-3 w-3 mr-1" />
+                {locations.length} location{locations.length !== 1 ? 's' : ''}
+              </Badge>
+              {apiRequestsCompleted > 0 && (
+                <Badge variant="secondary" className="text-xs">
+                  {apiRequestsCompleted}/{totalApiRequests} areas analyzed
+                </Badge>
+              )}
+          </div>
         </div>
-        <div className="flex items-center space-x-2">
-          <Badge variant="outline" className="text-xs">
-            <MapPin className="h-3 w-3 mr-1" />
-            {locations.length} location{locations.length !== 1 ? 's' : ''}
-          </Badge>
-          {apiRequestsCompleted > 0 && (
-            <Badge variant="secondary" className="text-xs">
-              {apiRequestsCompleted}/{totalApiRequests} areas analyzed
-            </Badge>
-          )}
-        </div>
-      </div>
-
+        
       {/* Main Content: Map (75%) + Info Panel (25%) */}
       <div className="flex gap-4 h-[600px]">
         {/* Map Container - 75% width */}
@@ -631,43 +650,43 @@ export const CompanyAnalysisMap: React.FC<AnalysisMapProps> = ({
           <div className="relative h-full">
             <div ref={mapContainer} className="h-full w-full" />
           
-            {/* Loading Overlay */}
-            {isLoading && (
-              <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                <Card className="p-4">
-                  <div className="flex items-center space-x-3">
-                    <Loader2 className="h-5 w-5 animate-spin text-primary" />
-                    <div>
-                      <p className="font-medium">Loading Map...</p>
-                      <p className="text-xs text-muted-foreground">
-                        Initializing satellite view and company locations
-                      </p>
-                    </div>
+          {/* Loading Overlay */}
+          {isLoading && (
+            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+              <Card className="p-4">
+                <div className="flex items-center space-x-3">
+                  <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                  <div>
+                    <p className="font-medium">Loading Map...</p>
+                    <p className="text-xs text-muted-foreground">
+                      Initializing satellite view and company locations
+                    </p>
                   </div>
-                </Card>
-              </div>
-            )}
+                </div>
+              </Card>
+            </div>
+          )}
 
-            {/* Error Display */}
-            {error && (
-              <div className="absolute top-4 left-4 right-4">
-                <Alert variant="destructive">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              </div>
-            )}
+          {/* Error Display */}
+          {error && (
+            <div className="absolute top-4 left-4 right-4">
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            </div>
+          )}
 
-            {/* API Progress Display */}
-            {!isLoading && totalApiRequests > 0 && apiRequestsCompleted < totalApiRequests && (
+          {/* API Progress Display */}
+          {!isLoading && totalApiRequests > 0 && apiRequestsCompleted < totalApiRequests && (
               <div className="absolute top-4 left-4 right-4">
                 <Card className="p-4 bg-background/90 backdrop-blur-sm">
                   <div className="space-y-3">
-                    <div className="flex items-center space-x-2">
-                      <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                <div className="flex items-center space-x-2">
+                  <Loader2 className="h-4 w-4 animate-spin text-primary" />
                       <span className="text-sm font-medium">
-                        Finding similar areas... {apiRequestsCompleted}/{totalApiRequests}
-                      </span>
+                    Finding similar areas... {apiRequestsCompleted}/{totalApiRequests}
+                  </span>
                     </div>
                     <Progress 
                       value={(apiRequestsCompleted / totalApiRequests) * 100} 
@@ -676,12 +695,12 @@ export const CompanyAnalysisMap: React.FC<AnalysisMapProps> = ({
                     <div className="text-xs text-muted-foreground">
                       {similarAreas.length} green areas found so far
                     </div>
-                  </div>
-                </Card>
-              </div>
-            )}
-          </div>
-        </Card>
+                </div>
+              </Card>
+            </div>
+          )}
+        </div>
+      </Card>
 
         {/* Info Panel - 25% width */}
         <Card className="flex-1 p-4 overflow-auto">
