@@ -6,24 +6,22 @@
     "Revenue": {
       "2023": "28600 Mio euro"
     },
+    "Number of plants": 9,
     "places": [
       {
         "name": "Profen Coal Mine",
         "location": "Elsteraue, Profen, Saxony-Anhalt, Germany",
-        "coordinates": [12.184, 51.144],
-        "Number of plants": 3
+        "coordinates": [12.184, 51.144]
       },
       {
         "name": "Inden Coal Mine",
         "location": "Inden, Aldenhoven, Jülich, North-Rhine Westphalia, Germany",
-        "coordinates": [6.35, 50.875],
-        "Number of plants": 3
+        "coordinates": [6.35, 50.875]
       },
       {
         "name": "Garzweiler Coal Mine",
         "location": "Bedburg, North-Rhine Westphalia, Germany",
-        "coordinates": [6.4529844, 51.0839989],
-        "Number of plants": 3
+        "coordinates": [6.4529844, 51.0839989]
       }
     ]
   },
@@ -31,15 +29,15 @@
     "company": "Kopalnia Węgla Brunatnego Sieniawa Sp",
     "Industry": "Coal",
     "Market cap": "55.61 Million",
+    "Number of plants": 3,
     "Revenue": {
-      "2023": "28600 Mio euro"
+      "latest": "Not publicly available"
     },
     "places": [
       {
         "name": "KWB Sieniawa Coal Mine",
         "location": "Subcarpathian, Poland",
-        "coordinates": [15.369152, 52.378364],
-        "Number of plants": 3
+        "coordinates": [15.369152, 52.378364]
       }
     ]
   },
@@ -47,15 +45,15 @@
     "company": "Mitteldeutsche Braunkohlengesellschaft mbH",
     "Industry": "Coal",
     "Market cap": "1 Billion",
+    "Number of plants": 3,
     "Revenue": {
-      "2023": "28600 Mio euro"
+      "2022": "427 Mio euro"
     },
     "places": [
       {
         "name": "Vereinigtes Schleenhain Coal Mine",
         "location": "Groitzsch, Neukieritzsch, Saxony-Anhalt, Germany",
-        "coordinates": [12.386, 51.128],
-        "Number of plants": 3
+        "coordinates": [12.386, 51.128]
       }
     ]
   },
@@ -63,15 +61,15 @@
     "company": "Lausitz Energie Bergbau AG",
     "Industry": "Coal",
     "Market cap": "1 Billion",
+    "Number of plants": 3,
     "Revenue": {
-      "2023": "28600 Mio euro"
+      "latest": "Not publicly available"
     },
     "places": [
       {
         "name": "Nochten Coal Mine",
         "location": "Weißwasser, Boxberg, Saxony, Germany",
-        "coordinates": [14.574709, 51.457109],
-        "Number of plants": 3
+        "coordinates": [14.574709, 51.457109]
       }
     ]
   },
@@ -79,17 +77,61 @@
     "company": "Severočeské doly AS",
     "Industry": "Coal",
     "Market cap": "300 Million",
+    "Number of plants": 2,
     "Revenue": {
-      "2023": "28600 Mio euro"
+      "CEZ Group 2023": "13624 Mio euro"
     },
     "places": [
       {
         "name": "Nástup-Tušimice Coal Mine",
         "location": "Chomutov, Kadan, Ústí nad Labem, Czech Republic",
-        "coordinates": [13.386449, 50.406429],
-        "Number of plants": 2
+        "coordinates": [13.386449, 50.406429]
+      }
+    ]
+  },
+  {
+    "company": "Engie Electrabel",
+    "Industry": "Nuclear Energy",
+    "Market cap": "42.8 Billion euro",
+    "Number of plants": 2,
+    "Revenue": {
+      "2024": "73812 Mio euro"
+    },
+    "places": [
+      {
+        "name": "Tihange Nuclear Power Plant",
+        "location": "Huy, Liège, Belgium",
+        "coordinates": [49.416, 6.2169]
+      }
+    ]
+  },
+  {
+    "company": "Électricité de France SA (EDF)",
+    "Industry": "Nuclear Energy",
+    "Market cap": "82 Billion euro",
+    "Number of plants": 4,
+    "Revenue": {
+      "2023": "139695 Mio euro"
+    },
+    "places": [
+      {
+        "name": "Cattenom Nuclear Power Plant",
+        "location": "Moselle, Grand Est, France",
+        "coordinates": [50.5334, 5.2714]
+      }
+    ]
+  },
+  {
+    "company": "Opel Eisenach GmbH (Parent: Stellantis NV)",
+    "Industry": "Thermal Power",
+    "Number of plants": 1,
+    "Status": "Operating",
+    "places": [
+      {
+        "name": "Wiesengrund Power Station",
+        "location": "Eisenach, Thüringen, Germany",
+        "coordinates": [50.5334, 5.2714]
       }
     ]
   }
 ]
-

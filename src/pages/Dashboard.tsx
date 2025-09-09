@@ -9,31 +9,27 @@ import { RegionAnalyzer } from "@/components/RegionAnalyzer";
 import { CompanyReport } from "@/components/CompanyReport";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { MetricGrid } from "@/components/dashboard";
-import { 
-  EnhancedCompanyLocation, 
-  MockCompanyData,
-  convertMockDataToEnhanced,
-  convertEnhancedToLegacy 
-} from "@/types/company";
 import { CompanyData, GlobeEntity } from "@/types/globe";
 import mockDataJson from "@/data/mockdata.json";
+
+// Removed old GEE Analysis imports - using simplified approach now
 
 interface CompanyLocation {
   id: string;
   name: string;
   position: [number, number, number];
-  type: 'manufacturing' | 'mining' | 'agriculture' | 'energy';
+  type: 'manufacturing' | 'mining' | 'agriculture' | 'energy' | 'nuclear' | 'thermal';
   impactScore: number;
   country: string;
 }
 
-export type DashboardView = 'overview' | 'companies' | 'regions' | 'reports' | 'settings';
+export type DashboardView = 'overview' | 'companies' | 'regions' | 'analysis' | 'reports' | 'settings';
 
 const Dashboard = () => {
   const [activeView, setActiveView] = useState<DashboardView>('overview');
   const [selectedCompany, setSelectedCompany] = useState<CompanyLocation | null>(null);
-  const [selectedEnhancedCompany, setSelectedEnhancedCompany] = useState<EnhancedCompanyLocation | null>(null);
   const [selectedGlobeEntity, setSelectedGlobeEntity] = useState<GlobeEntity | null>(null);
   const [filters, setFilters] = useState({
     type: 'all',
@@ -41,22 +37,43 @@ const Dashboard = () => {
     timeRange: '2024'
   });
 
-  // Load data from mockdata.JSON file
-  const mockCompanies: MockCompanyData[] = mockDataJson as MockCompanyData[];
-  
-  // Convert mock data to enhanced format (flattens all mines into individual entries)
-  const enhancedCompanies: EnhancedCompanyLocation[] = convertMockDataToEnhanced(mockCompanies);
-  
-  // Convert to CompanyData format for globe visualization
-  const globeCompanies: CompanyData[] = mockCompanies as CompanyData[];
+  // Removed GEE Analysis state - using simplified approach
 
-  // Use shared company list for list and metrics
-  const companyLocations: CompanyLocation[] = companiesData
+  // Convert our unified companies to format CesiumGlobe expects
+  const globeCompanies: CompanyData[] = companiesData.map(company => ({
+    company: company.name,
+    Industry: company.industry,
+    "Market cap": company.marketCap || "N/A",
+    Revenue: company.revenue || undefined,
+    places: company.places.map(place => {
+      // Calculate center point from rectangular coordinates [tlx, tly, brx, bry]
+      const [tlx, tly, brx, bry] = place.coordinates;
+      const centerLng = (tlx + brx) / 2;
+      const centerLat = (tly + bry) / 2;
+      
+      return {
+        name: place.name,
+        location: place.location,
+        coordinates: [centerLng, centerLat] as [number, number], // Convert to center point
+        "Number of plants": company.numberOfPlants || 1
+      };
+    })
+  }));
+
+  // Convert new company format to legacy format for compatibility
+  const companyLocations: CompanyLocation[] = companiesData.map(company => ({
+    id: company.id,
+    name: company.name,
+    position: company.position,
+    type: company.type === 'nuclear' || company.type === 'thermal' ? 'energy' : company.type,
+    impactScore: company.impactScore,
+    country: company.country
+  }))
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const view = params.get('view') as DashboardView | null
-    if (view && ['overview','companies','regions','reports','settings'].includes(view)) {
+    if (view && ['overview','companies','regions','analysis','reports','settings'].includes(view)) {
       setActiveView(view)
     }
   }, [])
@@ -78,7 +95,9 @@ const Dashboard = () => {
               <Card className="lg:col-span-2 p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-semibold">Global Impact Map</h3>
-                  <Badge variant="secondary">{enhancedCompanies.length} facilities</Badge>
+                  <Badge variant="secondary">
+                    {globeCompanies.reduce((total, company) => total + (company.places?.length || 0), 0)} locations
+                  </Badge>
                 </div>
                 <div className="h-96">
                   <CesiumGlobe 
@@ -92,7 +111,7 @@ const Dashboard = () => {
 
               {/* Company List Panel */}
               <Card className="p-6">
-                <h3 className="text-lg font-semibold mb-4">Recent Analysis</h3>
+                <h3 className="text-lg font-semibold mb-4">Companies</h3>
                 <CompanyList 
                   companies={companyLocations}
                   onCompanySelect={setSelectedCompany}
@@ -119,6 +138,36 @@ const Dashboard = () => {
 
       case 'regions':
         return <RegionAnalyzer />;
+
+      case 'analysis':
+        return (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold">Satellite Analysis</h2>
+                <p className="text-muted-foreground mt-1">
+                  Environmental analysis is now available on individual company pages
+                </p>
+              </div>
+              <Badge variant="secondary" className="text-xs">
+                Available on Company Pages
+              </Badge>
+            </div>
+            
+            <Card className="p-8 text-center">
+              <div className="space-y-4">
+                <div className="text-6xl">🛰️</div>
+                <h3 className="text-xl font-semibold">Analysis Available on Company Pages</h3>
+                <p className="text-muted-foreground max-w-md mx-auto">
+                  Visit any company page to see real-time satellite analysis with red company areas and green similar regions.
+                </p>
+                <Button onClick={() => setActiveView('companies')} className="mt-4">
+                  View Companies
+                </Button>
+              </div>
+            </Card>
+          </div>
+        );
 
       default:
         return (
@@ -151,13 +200,6 @@ const Dashboard = () => {
           />
         )}
 
-        {/* Enhanced Company Report Modal */}
-        {selectedEnhancedCompany && (
-          <CompanyReport
-            company={convertEnhancedToLegacy(selectedEnhancedCompany)}
-            onClose={() => setSelectedEnhancedCompany(null)}
-          />
-        )}
       </div>
     </SidebarProvider>
   );

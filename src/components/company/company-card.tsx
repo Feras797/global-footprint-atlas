@@ -22,7 +22,7 @@ interface CompanyLocation {
   id: string
   name: string
   position: [number, number, number]
-  type: 'manufacturing' | 'mining' | 'agriculture' | 'energy'
+  type: 'manufacturing' | 'mining' | 'agriculture' | 'energy' | 'nuclear' | 'thermal'
   impactScore: number
   country: string
 }
@@ -47,7 +47,9 @@ const CompanyTypeIcon = ({ type }: { type: string }) => {
     manufacturing: Factory,
     mining: Building2,
     agriculture: Wheat,
-    energy: Zap
+    energy: Zap,
+    nuclear: Zap,
+    thermal: Zap
   }
   
   const Icon = iconMap[type as keyof typeof iconMap] || Building2
@@ -59,7 +61,9 @@ const getTypeColor = (type: string) => {
     manufacturing: 'bg-blue-100 text-blue-800 border-blue-200',
     energy: 'bg-green-100 text-green-800 border-green-200',
     agriculture: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-    mining: 'bg-orange-100 text-orange-800 border-orange-200'
+    mining: 'bg-orange-100 text-orange-800 border-orange-200',
+    nuclear: 'bg-purple-100 text-purple-800 border-purple-200',
+    thermal: 'bg-red-100 text-red-800 border-red-200'
   }
   return colorMap[type as keyof typeof colorMap] || 'bg-gray-100 text-gray-800 border-gray-200'
 }
