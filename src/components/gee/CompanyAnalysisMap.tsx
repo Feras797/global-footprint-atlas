@@ -22,6 +22,7 @@ interface AnalysisMapProps {
   companyName: string;
   locations: CompanyLocation[];
   className?: string;
+  onAnalysisComplete?: (redAreas: any[], greenAreas: any[]) => void;
 }
 
 interface SimilarArea {
@@ -41,7 +42,8 @@ interface AnalysisResponse {
 export const CompanyAnalysisMap: React.FC<AnalysisMapProps> = ({
   companyName,
   locations,
-  className = ''
+  className = '',
+  onAnalysisComplete
 }) => {
   // Refs
   const mapContainer = useRef<HTMLDivElement>(null);
@@ -295,16 +297,59 @@ export const CompanyAnalysisMap: React.FC<AnalysisMapProps> = ({
     initialize();
   }, [locations]);
 
+  // Track if we've already called onAnalysisComplete to prevent infinite loops
+  const [hasNotifiedCompletion, setHasNotifiedCompletion] = useState(false);
+
   // Plot green squares when similar areas are updated
   useEffect(() => {
     if (similarAreas.length > 0 && apiRequestsCompleted === totalApiRequests) {
       plotGreenSquares();
+      
+      // Notify parent component that analysis is complete (only once)
+      if (onAnalysisComplete && !hasNotifiedCompletion) {
+        const redAreasData = locations.map((location, index) => ({
+          ...location,
+          environmentalData: generateMockEnvironmentalData()
+        }));
+        
+        const greenAreasData = similarAreas.map((area, index) => ({
+          name: `Similar Area ${index + 1}`,
+          coordinates: area.coordinates,
+          location: 'Environmentally Similar Region',
+          similarity: area.similarity,
+          environmentalData: generateMockEnvironmentalData()
+        }));
+        
+        onAnalysisComplete(redAreasData, greenAreasData);
+        setHasNotifiedCompletion(true);
+      }
     }
-  }, [similarAreas, apiRequestsCompleted, totalApiRequests]);
+  }, [similarAreas, apiRequestsCompleted, totalApiRequests, onAnalysisComplete, locations, hasNotifiedCompletion]);
 
   const handlePerformAnalysis = () => {
     console.log('🔬 Performing detailed analysis for all areas...');
     // This will trigger the detailed analysis API call later
+  };
+
+  // Helper function to generate mock environmental data
+  const generateMockEnvironmentalData = () => {
+    return {
+      ndvi: Math.random() * 0.6 + 0.2, // 0.2 to 0.8
+      ndwi: Math.random() * 0.6 - 0.3, // -0.3 to 0.3
+      ndbi: Math.random() * 0.4 - 0.2, // -0.2 to 0.2
+      elevation: Math.random() * 800 + 50, // 50 to 850m
+      slope: Math.random() * 25, // 0 to 25 degrees
+      temperature: Math.random() * 15 + 10, // 10 to 25°C
+      precipitation: Math.random() * 1200 + 300, // 300 to 1500mm
+      humidity: Math.random() * 40 + 40, // 40 to 80%
+      landCover: {
+        forest: Math.random() * 70,
+        urban: Math.random() * 40,
+        agriculture: Math.random() * 60,
+        water: Math.random() * 15,
+        barren: Math.random() * 20
+      }
+    };
   };
 
   return (

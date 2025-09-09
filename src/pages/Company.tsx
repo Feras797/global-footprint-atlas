@@ -1,16 +1,23 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft, Download, Share2, Satellite, MapPin, Building2 } from 'lucide-react'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { ArrowLeft, Download, Share2, Satellite, MapPin, Building2, FileText, Brain } from 'lucide-react'
 
 import { getCompanyById, Company } from '@/lib/companies'
 import { CompanyAnalysisMap } from '@/components/gee/CompanyAnalysisMap'
+import { ReportGenerator } from '@/components/report/ReportGenerator'
 
 export default function CompanyPage() {
   const params = useParams()
   const companyId = params.companyId || ''
+  const [activeTab, setActiveTab] = useState('analysis')
+  const [analysisData, setAnalysisData] = useState<{
+    redAreas: any[];
+    greenAreas: any[];
+  }>({ redAreas: [], greenAreas: [] })
   
   // Load company using unified system
   const company = useMemo(() => getCompanyById(companyId), [companyId])
@@ -128,24 +135,66 @@ export default function CompanyPage() {
           <div className="mb-6">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-2xl font-bold">Satellite Environmental Analysis</h2>
+                <h2 className="text-2xl font-bold">Environmental Impact Analysis</h2>
                 <p className="text-muted-foreground mt-1">
-                  Real-time analysis of {company.name}'s operational areas and environmentally similar regions
+                  Comprehensive analysis and AI-powered reporting for {company.name}'s environmental footprint
                 </p>
               </div>
               <Badge variant="secondary" className="text-xs">
                 <Satellite className="h-3 w-3 mr-1" />
-                Live Satellite Analysis
+                Live Analysis & AI Reports
               </Badge>
             </div>
           </div>
           
-          {/* Analysis Map Component */}
-          <CompanyAnalysisMap
-            companyName={company.name}
-            locations={companyLocations}
-            className="max-w-6xl mx-auto"
-          />
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="analysis" className="flex items-center gap-2">
+                <Satellite className="h-4 w-4" />
+                Satellite Analysis
+              </TabsTrigger>
+              <TabsTrigger value="reports" className="flex items-center gap-2">
+                <Brain className="h-4 w-4" />
+                AI Reports
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="analysis" className="space-y-6">
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold mb-2">Satellite Environmental Analysis</h3>
+                <p className="text-muted-foreground text-sm">
+                  Real-time analysis of operational areas (red) and environmentally similar regions (green)
+                </p>
+              </div>
+              
+              {/* Analysis Map Component */}
+              <CompanyAnalysisMap
+                companyName={company.name}
+                locations={companyLocations}
+                className="max-w-6xl mx-auto"
+                onAnalysisComplete={(redAreas: any[], greenAreas: any[]) => {
+                  setAnalysisData({ redAreas, greenAreas });
+                }}
+              />
+            </TabsContent>
+
+            <TabsContent value="reports" className="space-y-6">
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold mb-2">AI-Powered Environmental Reports</h3>
+                <p className="text-muted-foreground text-sm">
+                  Generate comprehensive reports using Gemini 2.5 Pro to analyze environmental data and provide insights
+                </p>
+              </div>
+              
+              {/* Report Generator Component */}
+              <ReportGenerator
+                company={company}
+                redAreasData={analysisData.redAreas}
+                greenAreasData={analysisData.greenAreas}
+                className="max-w-4xl mx-auto"
+              />
+            </TabsContent>
+          </Tabs>
         </div>
       </main>
     </div>
