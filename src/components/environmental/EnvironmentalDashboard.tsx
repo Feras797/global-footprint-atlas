@@ -109,6 +109,12 @@ export function EnvironmentalDashboard({ regionName, onClose, showCloseButton = 
      calculateTrend(filteredData, 'reference2') + 
      calculateTrend(filteredData, 'reference3')) / 3 : 0
   
+  // In some metrics, higher values are worse (e.g., deforestation, CO2)
+  const isHigherWorse = currentConfig.key === 'deforestation' || currentConfig.key === 'co2Emissions'
+  const isCompanyTrendBad = isHigherWorse ? mainPatchTrend > 0 : mainPatchTrend < 0
+  const trendDiff = mainPatchTrend - avgReferenceTrend
+  const isTrendDiffBad = isHigherWorse ? trendDiff > 0 : trendDiff < 0
+  
   const renderChart = () => {
     if (chartType === 'area') {
       return (
@@ -330,11 +336,11 @@ export function EnvironmentalDashboard({ regionName, onClose, showCloseButton = 
           </CardHeader>
           <CardContent>
             <div className="flex items-center space-x-2">
-              {mainPatchTrend > 0 ? 
-                <TrendingUp className="h-4 w-4 text-red-500" /> : 
-                <TrendingDown className="h-4 w-4 text-green-500" />
+              {mainPatchTrend >= 0 ? 
+                <TrendingUp className={`h-4 w-4 ${isCompanyTrendBad ? 'text-red-500' : 'text-green-500'}`} /> : 
+                <TrendingDown className={`h-4 w-4 ${isCompanyTrendBad ? 'text-red-500' : 'text-green-500'}`} />
               }
-              <span className={`font-semibold ${mainPatchTrend > 0 ? 'text-red-600' : 'text-green-600'}`}>
+              <span className={`font-semibold ${isCompanyTrendBad ? 'text-red-600' : 'text-green-600'}`}>
                 {Math.abs(mainPatchTrend).toFixed(1)}%
               </span>
             </div>
@@ -347,12 +353,12 @@ export function EnvironmentalDashboard({ regionName, onClose, showCloseButton = 
           </CardHeader>
           <CardContent>
             <div className="flex items-center space-x-2">
-              {avgReferenceTrend < mainPatchTrend ? 
-                <TrendingUp className="h-4 w-4 text-red-500" /> : 
-                <TrendingDown className="h-4 w-4 text-green-500" />
+              {trendDiff >= 0 ? 
+                <TrendingUp className={`h-4 w-4 ${isTrendDiffBad ? 'text-red-500' : 'text-green-500'}`} /> : 
+                <TrendingDown className={`h-4 w-4 ${isTrendDiffBad ? 'text-red-500' : 'text-green-500'}`} />
               }
-              <span className={`font-semibold ${avgReferenceTrend < mainPatchTrend ? 'text-red-600' : 'text-green-600'}`}>
-                {(mainPatchTrend - avgReferenceTrend).toFixed(1)}% difference
+              <span className={`font-semibold ${isTrendDiffBad ? 'text-red-600' : 'text-green-600'}`}>
+                {trendDiff.toFixed(1)}% difference
               </span>
             </div>
           </CardContent>
@@ -472,10 +478,10 @@ export function EnvironmentalDashboard({ regionName, onClose, showCloseButton = 
                     </div>
                     <div className="flex items-center space-x-2 mt-1">
                       {trend > 0 ? 
-                        <TrendingUp className="h-3 w-3 text-red-500" /> : 
-                        <TrendingDown className="h-3 w-3 text-green-500" />
+                        <TrendingUp className={`h-3 w-3 ${(config.key === 'deforestation' || config.key === 'co2Emissions') ? 'text-red-500' : 'text-green-500'}`} /> : 
+                        <TrendingDown className={`h-3 w-3 ${(config.key === 'deforestation' || config.key === 'co2Emissions') ? 'text-green-500' : 'text-red-500'}`} />
                       }
-                      <span className={`text-xs ${trend > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                      <span className={`text-xs ${(config.key === 'deforestation' || config.key === 'co2Emissions') ? (trend > 0 ? 'text-red-600' : 'text-green-600') : (trend > 0 ? 'text-green-600' : 'text-red-600')}`}>
                         {Math.abs(trend).toFixed(1)}% from baseline
                       </span>
                     </div>
