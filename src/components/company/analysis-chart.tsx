@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
+import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog'
 import { AnalysisChartProps } from '@/lib/types/analysis'
 import {
   Area,
@@ -25,10 +26,7 @@ import {
   TrendingUp,
   TrendingDown,
   Minus,
-  Info,
-  Download,
-  Maximize2,
-  Filter
+  Maximize2
 } from 'lucide-react'
 
 const COLORS = {
@@ -396,18 +394,20 @@ export const AnalysisChart: React.FC<AnalysisChartProps> = ({
         </div>
         
         <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-            <Info className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-            <Filter className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-            <Maximize2 className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-            <Download className="h-4 w-4" />
-          </Button>
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="default" size="sm" className="h-8 w-8 p-0" title="Expand">
+                <Maximize2 className="h-4 w-4" />
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-[95vw] w-[95vw] h-[85vh] p-4">
+              <div className="h-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  {renderChart()}
+                </ResponsiveContainer>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 

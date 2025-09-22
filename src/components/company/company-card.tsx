@@ -13,6 +13,8 @@ import {
   Zap,
   MapPin,
   TrendingDown,
+  TrendingUp,
+  Minus,
   Eye,
   FileText,
   MoreHorizontal
@@ -121,10 +123,11 @@ const getImpactBadgeColor = (color: string) => {
 }
 
 // Simple sparkline component
-const Sparkline = ({ className, seed, realData }: { 
+const Sparkline = ({ className, seed, realData, colorClassName }: { 
   className?: string, 
   seed?: string,
-  realData?: number[]
+  realData?: number[],
+  colorClassName?: string
 }) => {
   const points = React.useMemo(() => {
     // Use real data if available, otherwise fall back to seeded random data
@@ -159,7 +162,7 @@ const Sparkline = ({ className, seed, realData }: {
         fill="none"
         stroke="currentColor"
         strokeWidth="2"
-        className="text-green-500"
+        className={cn('text-green-500', colorClassName)}
       />
     </svg>
   )
@@ -177,6 +180,21 @@ export const CompanyCard = ({
 
   const trend = realAnalysisData?.trend || generateMockTrend(company.id)
   const impactMeta = React.useMemo(() => getImpactLevelForScore(company.impactScore), [company.impactScore])
+
+  const trendColor = trend.direction === 'down'
+    ? 'text-red-600'
+    : trend.direction === 'up'
+      ? 'text-green-600'
+      : 'text-muted-foreground'
+
+  const sparkColor = trend.direction === 'down'
+    ? 'text-red-500'
+    : trend.direction === 'up'
+      ? 'text-green-500'
+      : 'text-muted-foreground'
+
+  const TrendIcon = trend.direction === 'down' ? TrendingDown : trend.direction === 'up' ? TrendingUp : Minus
+  const trendSign = trend.direction === 'down' ? '-' : trend.direction === 'up' ? '+' : ''
 
 
   const handleCardClick = () => {
@@ -291,9 +309,9 @@ export const CompanyCard = ({
           <div className="space-y-3">
             <div className="text-right">
               <div className="text-xs text-muted-foreground mb-1">Recent Trend</div>
-              <div className="flex items-center justify-end space-x-1 text-sm text-green-600">
-                <TrendingDown className="h-3 w-3" />
-                <span>-{trend.value}% {trend.period}</span>
+              <div className={cn('flex items-center justify-end space-x-1 text-sm', trendColor)}>
+                <TrendIcon className="h-3 w-3" />
+                <span>{trendSign}{trend.value}% {trend.period}</span>
               </div>
             </div>
             
@@ -302,6 +320,7 @@ export const CompanyCard = ({
                 className="opacity-70 group-hover:opacity-100 transition-opacity" 
                 seed={company.id}
                 realData={realAnalysisData?.sparklineData}
+                colorClassName={sparkColor}
               />
             </div>
           </div>

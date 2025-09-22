@@ -384,51 +384,11 @@ export const RegionAnalyzer = () => {
               <MapLibreRegionSelector 
                 height="500px"
                 onRegionSelect={handleMapRegionSelect}
+                onCancel={() => setShowMapSelector(false)}
+                onContinue={() => setShowMapSelector(false)}
               />
               
-              {newRegion.lat && newRegion.lng && (
-                <div className="p-4 bg-muted rounded-lg">
-                  <h5 className="font-medium mb-2 text-gray-900 dark:text-gray-100">Selected Region</h5>
-                  <div className="space-y-3 text-sm">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <span className="text-gray-700 dark:text-gray-300">Center: </span>
-                        <span className="font-mono text-gray-900 dark:text-gray-100">{parseFloat(newRegion.lat).toFixed(6)}, {parseFloat(newRegion.lng).toFixed(6)}</span>
-                      </div>
-                      <div>
-                        <span className="text-gray-700 dark:text-gray-300">Area: </span>
-                        <span className="text-gray-900 dark:text-gray-100">{newRegion.area} km²</span>
-                      </div>
-                    </div>
-                    {newRegion.rectangleCoordinates && (
-                      <div>
-                        <span className="text-gray-700 dark:text-gray-300">Rectangle Coordinates: </span>
-                        <div className="font-mono text-xs mt-1 p-2 bg-background rounded border text-gray-900 dark:text-gray-100">
-                          {newRegion.rectangleCoordinates}
-                        </div>
-                        <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                          [lng_top_left, lat_top_left, lng_bottom_right, lat_bottom_right]
-                        </div>
-                      </div>
-                    )}
-                    <div className="flex justify-end space-x-3 mt-4">
-                      <Button 
-                        variant="outline" 
-                        onClick={() => setShowMapSelector(false)}
-                        className="border-red-500 text-red-600 dark:text-red-400 hover:bg-red-500 hover:text-white hover:border-red-500 transition-colors"
-                      >
-                        Cancel
-                      </Button>
-                      <Button 
-                        onClick={() => setShowMapSelector(false)} 
-                        className="bg-blue-500 hover:bg-blue-600 text-white"
-                      >
-                        Continue
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              )}
+              {/* Removed duplicate selected-region info and local buttons; handled inside selector */}
             </div>
           )}
 

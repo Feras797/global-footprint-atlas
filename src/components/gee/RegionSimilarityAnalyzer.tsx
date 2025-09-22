@@ -11,7 +11,7 @@ import { AlertCircle, Loader2, MapPin } from 'lucide-react'
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
 
 // Real similarity analysis API
-const SIMILARITY_API_BASE = import.meta.env.VITE_SIMILARITY_API_URL || 'https://similar1-370308594166.europe-west1.run.app/similarity/top3'
+const SIMILARITY_API_BASE = import.meta.env.VITE_SIMILARITY_API_URL || 'https://ep1-713632946240.europe-west1.run.app/similarity/top3'
 
 interface RegionData {
   id: string
@@ -397,7 +397,7 @@ export const RegionSimilarityAnalyzer: React.FC<RegionAnalysisProps> = ({
         }
       }
       
-      const response = await fetch((import.meta.env.VITE_WEATHER_API_URL || 'https://weather-370308594166.europe-west1.run.app') + '/analysis/industrial', {
+      const response = await fetch((import.meta.env.VITE_WEATHER_API_URL || 'https://ep2-713632946240.europe-west1.run.app') + '/analysis/industrial', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

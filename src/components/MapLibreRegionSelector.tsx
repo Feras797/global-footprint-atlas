@@ -22,6 +22,8 @@ interface MapLibreRegionSelectorProps {
   initialZoom?: number
   height?: string
   onRegionSelect?: (region: SelectedRegion) => void
+  onContinue?: () => void
+  onCancel?: () => void
 }
 
 type MapMode = 'navigate' | 'select'
@@ -30,7 +32,9 @@ export function MapLibreRegionSelector({
   initialCenter = [0, 20],
   initialZoom = 2,
   height = '400px',
-  onRegionSelect
+  onRegionSelect,
+  onContinue,
+  onCancel
 }: MapLibreRegionSelectorProps) {
   const mapContainer = useRef<HTMLDivElement>(null)
   const mapRef = useRef<maplibregl.Map | null>(null)
@@ -604,7 +608,7 @@ export function MapLibreRegionSelector({
         )}
       </div>
       
-      {/* Selected Region Info */}
+      {/* Selected Region Info with actions */}
       {selectedRegion && !isDrawing && (
         <div className="p-4 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg">
           <div className="flex items-center justify-between mb-3">
@@ -640,6 +644,22 @@ export function MapLibreRegionSelector({
                 [lng_top_left, lat_top_left, lng_bottom_right, lat_bottom_right]
               </div>
             </div>
+          </div>
+
+          {/* Primary actions */}
+          <div className="mt-4 flex items-center justify-end gap-3">
+            <button
+              onClick={() => onCancel?.()}
+              className="px-4 py-2 text-sm rounded border border-red-500 text-red-600 dark:text-red-400 bg-white dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => onContinue?.()}
+              className="px-4 py-2 text-sm rounded bg-blue-500 hover:bg-blue-600 text-white transition-colors"
+            >
+              Continue
+            </button>
           </div>
         </div>
       )}
