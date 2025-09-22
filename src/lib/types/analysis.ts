@@ -77,3 +77,29 @@ export interface PatchCardProps {
   className?: string
   showSimilarityScore?: boolean
 }
+
+// Analysis persistence types used for storing and surfacing company analysis summaries
+export interface AnalysisResultMetricsSummary {
+  trend: {
+    direction: 'up' | 'down' | 'stable'
+    value: number
+    period: string
+  }
+  sparklineData: number[]
+}
+
+export interface AnalysisResultEnvironmentalData {
+  redAreas: any[]
+  greenAreas: any[]
+  batchAnalysisData: any
+}
+
+export interface AnalysisResult {
+  companyId: string
+  quarter: string // e.g. "2024-Q1"
+  timestamp: string
+  metrics: AnalysisResultMetricsSummary
+  environmentalData: AnalysisResultEnvironmentalData
+}
+
+export type AnalysisStatus = 'not_analyzed' | 'analyzed' | 'new_quarter'

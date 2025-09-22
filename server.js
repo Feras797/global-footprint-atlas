@@ -3,6 +3,9 @@ import cors from 'cors';
 import fetch from 'node-fetch';
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 const execAsync = promisify(exec);
 const app = express();
@@ -15,6 +18,135 @@ app.use(cors({
 }));
 
 app.use(express.json());
+
+// --- Local analysis persistence (JSON on disk) ---
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const RESULTS_DIR = path.join(__dirname, 'analysis-results');
+
+function ensureResultsDir () {
+  if (!fs.existsSync(RESULTS_DIR)) {
+    fs.mkdirSync(RESULTS_DIR, { recursive: true });
+  }
+}
+
+function getLatestQuarter () {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth() + 1;
+  const q = Math.ceil(month / 3);
+  return `${year}-Q${q}`;
+}
+
+function companyDir (companyId) {
+  return path.join(RESULTS_DIR, companyId);
+}
+
+function parseQuarterFromFilename (file) {
+  return path.basename(file, '.json');
+}
+
+app.get('/api/analysis/:companyId/status', async (req, res) => {
+  try {
+    ensureResultsDir();
+    const { companyId } = req.params;
+    const dir = companyDir(companyId);
+    const currentQuarter = getLatestQuarter();
+    if (!fs.existsSync(dir)) {
+      return res.json({ status: 'not_analyzed', currentQuarter });
+    }
+    const files = fs.readdirSync(dir).filter(f => f.endsWith('.json'));
+    if (files.length === 0) {
+      return res.json({ status: 'not_analyzed', currentQuarter });
+    }
+    // pick latest by filename sorting (YYYY-Qn lexicographically OK if years differ)
+    const latestFile = files.sort().at(-1);
+    const storedQuarter = parseQuarterFromFilename(latestFile);
+    const status = storedQuarter === currentQuarter ? 'analyzed' : 'new_quarter';
+    return res.json({ status, currentQuarter, storedQuarter });
+  } catch (e) {
+    console.error('status endpoint error', e);
+    res.status(500).json({ error: 'status_failed', message: e.message });
+  }
+});
+
+app.get('/api/analysis/:companyId/latest', async (req, res) => {
+  try {
+    ensureResultsDir();
+    const { companyId } = req.params;
+    const dir = companyDir(companyId);
+    if (!fs.existsSync(dir)) return res.status(404).json({ error: 'not_found' });
+    const files = fs.readdirSync(dir).filter(f => f.endsWith('.json'));
+    if (files.length === 0) return res.status(404).json({ error: 'not_found' });
+    const latestFile = files.sort().at(-1);
+    const json = fs.readFileSync(path.join(dir, latestFile), 'utf-8');
+    res.json(JSON.parse(json));
+  } catch (e) {
+    console.error('latest endpoint error', e);
+    res.status(500).json({ error: 'latest_failed', message: e.message });
+  }
+});
+
+app.get('/api/analysis/:companyId/:quarter', async (req, res) => {
+  try {
+    ensureResultsDir();
+    const { companyId, quarter } = req.params;
+    const file = path.join(companyDir(companyId), `${quarter}.json`);
+    if (!fs.existsSync(file)) return res.status(404).json({ error: 'not_found' });
+    const json = fs.readFileSync(file, 'utf-8');
+    res.json(JSON.parse(json));
+  } catch (e) {
+    console.error('read quarter error', e);
+    res.status(500).json({ error: 'read_failed', message: e.message });
+  }
+});
+
+app.post('/api/analysis/:companyId', async (req, res) => {
+  try {
+    ensureResultsDir();
+    const { companyId } = req.params;
+    const quarter = getLatestQuarter();
+    const payload = req.body || {};
+    const record = {
+      companyId,
+      quarter,
+      timestamp: new Date().toISOString(),
+      metrics: payload.metrics || { trend: { direction: 'stable', value: 0, period: 'last quarter' }, sparklineData: [] },
+      environmentalData: payload.environmentalData || { redAreas: [], greenAreas: [], batchAnalysisData: null }
+    };
+    const dir = companyDir(companyId);
+    fs.mkdirSync(dir, { recursive: true });
+    const file = path.join(dir, `${quarter}.json`);
+    fs.writeFileSync(file, JSON.stringify(record, null, 2), 'utf-8');
+    res.json(record);
+  } catch (e) {
+    console.error('write analysis error', e);
+    res.status(500).json({ error: 'write_failed', message: e.message });
+  }
+});
+
+app.post('/api/analysis/:companyId/:quarter', async (req, res) => {
+  try {
+    ensureResultsDir();
+    const { companyId, quarter } = req.params;
+    const payload = req.body || {};
+    const record = {
+      companyId,
+      quarter,
+      timestamp: new Date().toISOString(),
+      metrics: payload.metrics || { trend: { direction: 'stable', value: 0, period: 'last quarter' }, sparklineData: [] },
+      environmentalData: payload.environmentalData || { redAreas: [], greenAreas: [], batchAnalysisData: null }
+    };
+    const dir = companyDir(companyId);
+    fs.mkdirSync(dir, { recursive: true });
+    const file = path.join(dir, `${quarter}.json`);
+    fs.writeFileSync(file, JSON.stringify(record, null, 2), 'utf-8');
+    res.json(record);
+  } catch (e) {
+    console.error('write analysis error', e);
+    res.status(500).json({ error: 'write_failed', message: e.message });
+  }
+});
 
 // Gemini API proxy endpoint
 app.post('/api/gemini', async (req, res) => {
@@ -80,4 +212,5 @@ app.post('/api/gemini', async (req, res) => {
 app.listen(PORT, () => {
   console.log(`🚀 Gemini proxy server running on http://localhost:${PORT}`);
   console.log(`🔗 Handling requests from http://localhost:8080`);
+  console.log(`📂 Analysis results directory: ${RESULTS_DIR}`);
 });

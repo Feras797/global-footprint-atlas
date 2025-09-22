@@ -4,8 +4,9 @@ import { useNavigate } from 'react-router-dom'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
-import { ImpactIndicator } from './impact-indicator'
 import { cn } from '@/lib/utils'
+import type { AnalysisStatus } from '@/lib/types/analysis'
+import { ImpactIndicator } from './impact-indicator'
 import {
   Building2,
   Factory,
@@ -43,6 +44,8 @@ interface CompanyCardProps {
     }
     sparklineData?: number[]
   }
+  analysisStatus?: AnalysisStatus
+  onStartAnalysis?: (companyId: string) => void
 }
 
 // Deterministic pseudo-random helpers for stable mock data per company
@@ -106,21 +109,7 @@ const getTypeColor = (type: string) => {
   return colorMap[type as keyof typeof colorMap] || 'bg-gray-100 text-gray-800 border-gray-200'
 }
 
-// Helpers to render impact label badge outside of ImpactIndicator
-const getImpactLevelForScore = (score: number) => {
-  if (score > 70) return { label: 'High Impact', color: 'red' }
-  if (score > 40) return { label: 'Medium Impact', color: 'orange' }
-  return { label: 'Low Impact', color: 'green' }
-}
-
-const getImpactBadgeColor = (color: string) => {
-  const map = {
-    red: 'bg-red-100 text-red-800 border-red-200',
-    orange: 'bg-orange-100 text-orange-800 border-orange-200',
-    green: 'bg-green-100 text-green-800 border-green-200'
-  }
-  return map[color as keyof typeof map] || map.green
-}
+// Removed mocked impact helpers; we only surface real analysis results now
 
 // Simple sparkline component
 const Sparkline = ({ className, seed, realData, colorClassName }: { 
@@ -174,27 +163,29 @@ export const CompanyCard = ({
   variant = 'default',
   showActions = true,
   className,
-  realAnalysisData
+  realAnalysisData,
+  analysisStatus,
+  onStartAnalysis
 }: CompanyCardProps) => {
   const navigate = useNavigate()
 
-  const trend = realAnalysisData?.trend || generateMockTrend(company.id)
-  const impactMeta = React.useMemo(() => getImpactLevelForScore(company.impactScore), [company.impactScore])
+  const trend = realAnalysisData?.trend
+  // No mocked impact score; analysis info is derived from saved results only
 
-  const trendColor = trend.direction === 'down'
+  const trendColor = trend?.direction === 'down'
     ? 'text-red-600'
-    : trend.direction === 'up'
+    : trend?.direction === 'up'
       ? 'text-green-600'
       : 'text-muted-foreground'
 
-  const sparkColor = trend.direction === 'down'
+  const sparkColor = trend?.direction === 'down'
     ? 'text-red-500'
-    : trend.direction === 'up'
+    : trend?.direction === 'up'
       ? 'text-green-500'
       : 'text-muted-foreground'
 
-  const TrendIcon = trend.direction === 'down' ? TrendingDown : trend.direction === 'up' ? TrendingUp : Minus
-  const trendSign = trend.direction === 'down' ? '-' : trend.direction === 'up' ? '+' : ''
+  const TrendIcon = trend?.direction === 'down' ? TrendingDown : trend?.direction === 'up' ? TrendingUp : Minus
+  const trendSign = trend?.direction === 'down' ? '-' : trend?.direction === 'up' ? '+' : ''
 
 
   const handleCardClick = () => {
@@ -225,7 +216,23 @@ export const CompanyCard = ({
               </div>
             </div>
           </div>
-          <ImpactIndicator score={company.impactScore} size="sm" showLabel={false} />
+          <div className="flex items-center gap-2">
+            {(analysisStatus === 'not_analyzed' || analysisStatus === 'new_quarter') && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-[10px] h-7"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  if (onStartAnalysis) onStartAnalysis(company.id)
+                  else navigate(`/company/${company.id}`)
+                }}
+              >
+                {analysisStatus === 'new_quarter' ? 'Refresh' : 'Start'}
+              </Button>
+            )}
+            <ImpactIndicator score={company.impactScore} size="sm" showLabel={false} />
+          </div>
         </div>
       </Card>
     )
@@ -271,6 +278,19 @@ export const CompanyCard = ({
               >
                 <Eye className="h-4 w-4" />
               </Button>
+              {(analysisStatus === 'not_analyzed' || analysisStatus === 'new_quarter') && (
+                <Button 
+                  variant="default" 
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    if (onStartAnalysis) onStartAnalysis(company.id)
+                    else navigate(`/company/${company.id}`)
+                  }}
+                >
+                  {analysisStatus === 'new_quarter' ? 'Refresh Analysis' : 'Start Analysis'}
+                </Button>
+              )}
               <Button variant="ghost" size="sm">
                 <FileText className="h-4 w-4" />
               </Button>
@@ -286,7 +306,7 @@ export const CompanyCard = ({
         {/* Content */}
         <div className="grid grid-cols-2 gap-4">
 
-          {/* Left: Stacked tags to the left of the score */}
+          {/* Left: Type and analysis status */}
           <div className="flex items-center gap-4">
             <div className="flex flex-col gap-2">
               <Badge 
@@ -297,31 +317,40 @@ export const CompanyCard = ({
               </Badge>
               <Badge 
                 variant="outline" 
-                className={cn('w-fit text-xs', getImpactBadgeColor(impactMeta.color))}
+                className="w-fit text-xs"
               >
-                {impactMeta.label}
+                {analysisStatus === 'analyzed' && 'Analyzed'}
+                {analysisStatus === 'new_quarter' && 'Update available'}
+                {(!analysisStatus || analysisStatus === 'not_analyzed') && 'No analysis yet'}
               </Badge>
             </div>
-            <ImpactIndicator score={company.impactScore} size="md" showLabel={false} />
           </div>
 
           {/* Right: Trend and Sparkline */}
           <div className="space-y-3">
-            <div className="text-right">
-              <div className="text-xs text-muted-foreground mb-1">Recent Trend</div>
-              <div className={cn('flex items-center justify-end space-x-1 text-sm', trendColor)}>
-                <TrendIcon className="h-3 w-3" />
-                <span>{trendSign}{trend.value}% {trend.period}</span>
+            {trend ? (
+              <div className="text-right">
+                <div className="text-xs text-muted-foreground mb-1">Recent Trend</div>
+                <div className={cn('flex items-center justify-end space-x-1 text-sm', trendColor)}>
+                  <TrendIcon className="h-3 w-3" />
+                  <span>{trendSign}{trend.value}% {trend.period}</span>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="text-right">
+                <div className="text-xs text-muted-foreground mb-1">No analysis yet</div>
+              </div>
+            )}
             
             <div className="flex justify-end">
-              <Sparkline 
-                className="opacity-70 group-hover:opacity-100 transition-opacity" 
-                seed={company.id}
-                realData={realAnalysisData?.sparklineData}
-                colorClassName={sparkColor}
-              />
+              {realAnalysisData?.sparklineData && realAnalysisData.sparklineData.length > 0 ? (
+                <Sparkline 
+                  className="opacity-70 group-hover:opacity-100 transition-opacity" 
+                  seed={company.id}
+                  realData={realAnalysisData.sparklineData}
+                  colorClassName={sparkColor}
+                />
+              ) : null}
             </div>
           </div>
         </div>

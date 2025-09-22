@@ -1,10 +1,12 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { CompanyCard } from "@/components/company";
 import { Input } from "@/components/ui/input";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Building2, Search } from "lucide-react";
+import { analysisStorage } from "@/lib/services/analysisStorage";
+import type { AnalysisStatus } from "@/lib/types/analysis";
 
 interface CompanyLocation {
   id: string;
@@ -19,14 +21,63 @@ interface CompanyListProps {
   companies: CompanyLocation[];
   onCompanySelect: (company: CompanyLocation) => void;
   showAll?: boolean;
+  onStartAnalysis?: (companyId: string) => void;
 }
 
 export const CompanyList: React.FC<CompanyListProps> = ({ 
   companies, 
   onCompanySelect,
-  showAll = false 
+  showAll = false,
+  onStartAnalysis
 }) => {
   const [query, setQuery] = useState("");
+  const [analysisStatuses, setAnalysisStatuses] = useState<Record<string, AnalysisStatus>>({})
+  const [latestAnalysisData, setLatestAnalysisData] = useState<Record<string, { trend: { direction: 'up' | 'down' | 'stable', value: number, period: string }, sparklineData?: number[] } | undefined>>({})
+
+  // Seed from local cache immediately
+  useEffect(() => {
+    const statusMap: Record<string, AnalysisStatus> = {}
+    const dataMap: Record<string, { trend: { direction: 'up' | 'down' | 'stable', value: number, period: string }, sparklineData?: number[] } | undefined> = {}
+    companies.forEach(c => {
+      statusMap[c.id] = analysisStorage.getAnalysisStatus(c.id)
+      const latest = analysisStorage.getAnalysis(c.id)
+      if (latest) {
+        dataMap[c.id] = { trend: latest.metrics.trend, sparklineData: latest.metrics.sparklineData }
+      }
+    })
+    setAnalysisStatuses(statusMap)
+    setLatestAnalysisData(dataMap)
+  }, [companies])
+
+  // Sync from server per company (company-basis persistence)
+  useEffect(() => {
+    let cancelled = false
+    const load = async () => {
+      for (const c of companies) {
+        try {
+          const [remoteStatus, remoteLatest] = await Promise.all([
+            analysisStorage.getRemoteStatus(c.id),
+            analysisStorage.getRemoteLatest(c.id)
+          ])
+          if (cancelled) return
+          setAnalysisStatuses(prev => ({ ...prev, [c.id]: remoteStatus }))
+          if (remoteLatest) {
+            setLatestAnalysisData(prev => ({
+              ...prev,
+              [c.id]: {
+                trend: remoteLatest.metrics.trend,
+                sparklineData: remoteLatest.metrics.sparklineData
+              }
+            }))
+          }
+        } catch (e) {
+          // ignore failures; best-effort
+        }
+      }
+    }
+    load()
+    return () => { cancelled = true }
+  }, [companies])
 
   const filteredCompanies = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -82,6 +133,9 @@ export const CompanyList: React.FC<CompanyListProps> = ({
                           variant="default"
                           className="rounded-none bg-transparent shadow-none p-6"
                           showActions
+                          analysisStatus={analysisStatuses[company.id]}
+                          onStartAnalysis={onStartAnalysis}
+                          realAnalysisData={latestAnalysisData[company.id]}
                         />
                       ))}
                     </div>
@@ -99,6 +153,9 @@ export const CompanyList: React.FC<CompanyListProps> = ({
                 onSelect={onCompanySelect}
                 variant="compact"
                 showActions={false}
+                analysisStatus={analysisStatuses[company.id]}
+                onStartAnalysis={onStartAnalysis}
+                realAnalysisData={latestAnalysisData[company.id]}
               />
             ))}
           </div>

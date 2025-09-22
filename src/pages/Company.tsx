@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -11,6 +11,9 @@ import { getCompanyById, Company } from '@/lib/companies'
 import { CompanyAnalysisMap } from '@/components/gee/CompanyAnalysisMap'
 import { RealDataVisualization } from '@/components/company/RealDataVisualization'
 import { ReportGenerator } from '@/components/report/ReportGenerator'
+import { useAnalysisManager } from '@/hooks/useAnalysisManager'
+import type { AnalysisResult } from '@/lib/types/analysis'
+import { analysisStorage } from '@/lib/services/analysisStorage'
 
 
 export default function CompanyPage() {
@@ -27,14 +30,35 @@ export default function CompanyPage() {
   // Load company using unified system
   const company = useMemo(() => getCompanyById(companyId), [companyId])
   const navigate = useNavigate()
+  const { saveResult } = useAnalysisManager(companyId)
+  const [storedResult, setStoredResult] = useState<AnalysisResult | null>(null)
+  const [storedStatus, setStoredStatus] = useState<'not_analyzed' | 'analyzed' | 'new_quarter'>('not_analyzed')
 
-  // Reset analysis state when company changes
-  useMemo(() => {
-    setAnalysisCompleted(false);
-    setActiveTab('analysis');
-    setAnalysisData({ redAreas: [], greenAreas: [] });
-    setBatchAnalysisData(null);
-  }, [companyId]);
+  // Reset and load stored analysis when company changes
+  useEffect(() => {
+    setAnalysisCompleted(false)
+    setActiveTab('analysis')
+    setAnalysisData({ redAreas: [], greenAreas: [] })
+    setBatchAnalysisData(null)
+    let isMounted = true
+    Promise.all([
+      analysisStorage.getRemoteLatest(companyId),
+      analysisStorage.getRemoteStatus(companyId)
+    ]).then(([latest, status]) => {
+      if (!isMounted) return
+      setStoredResult(latest)
+      setStoredStatus(status)
+      if (latest) {
+        setAnalysisCompleted(true)
+        setActiveTab('visualization')
+      }
+    }).catch(() => {
+      // ignore
+    })
+    return () => {
+      isMounted = false
+    }
+  }, [companyId])
 
   // Convert company places to location format for the map
   const companyLocations = useMemo(() => {
@@ -171,14 +195,14 @@ export default function CompanyPage() {
                   <TooltipTrigger asChild>
                     <TabsTrigger 
                       value="visualization" 
-                      disabled={!analysisCompleted}
+                      disabled={!analysisCompleted && !storedResult}
                       className="flex items-center gap-2"
                     >
                       <BarChart3 className="h-4 w-4" />
                       Data Visualization
                     </TabsTrigger>
                   </TooltipTrigger>
-                  {!analysisCompleted && (
+                  {!analysisCompleted && !storedResult && (
                     <TooltipContent>
                       <p>Complete satellite analysis first</p>
                     </TooltipContent>
@@ -190,14 +214,14 @@ export default function CompanyPage() {
                   <TooltipTrigger asChild>
                     <TabsTrigger 
                       value="reports" 
-                      disabled={!analysisCompleted}
+                      disabled={!analysisCompleted && !storedResult}
                       className="flex items-center gap-2"
                     >
                       <Brain className="h-4 w-4" />
                       AI Reports
                     </TabsTrigger>
                   </TooltipTrigger>
-                  {!analysisCompleted && (
+                  {!analysisCompleted && !storedResult && (
                     <TooltipContent>
                       <p>Complete satellite analysis first</p>
                     </TooltipContent>
@@ -208,10 +232,19 @@ export default function CompanyPage() {
 
             <TabsContent value="analysis" className="space-y-6">
               <div className="mb-6">
-                <h3 className="text-lg font-semibold mb-2">Satellite Environmental Analysis</h3>
-                <p className="text-muted-foreground text-sm">
-                  Real-time analysis of operational areas (red) and environmentally similar regions (green)
-                </p>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-lg font-semibold mb-2">Satellite Environmental Analysis</h3>
+                    <p className="text-muted-foreground text-sm">
+                      Real-time analysis of operational areas (red) and environmentally similar regions (green)
+                    </p>
+                  </div>
+                  {storedStatus === 'new_quarter' && (
+                    <Button size="sm" onClick={() => setActiveTab('analysis')}>
+                      Update for {analysisStorage.getLatestQuarter()}
+                    </Button>
+                  )}
+                </div>
               </div>
               
               {/* Analysis Map Component */}
@@ -227,6 +260,53 @@ export default function CompanyPage() {
                   setBatchAnalysisData(batchData);
                   setAnalysisCompleted(true);
                   setActiveTab('visualization'); // Auto-switch to visualization tab
+                  // Persist analysis for dashboard cards and status
+                  try {
+                    const metricsSummary = {
+                      trend: {
+                        direction: 'stable' as const,
+                        value: 0,
+                        period: 'last quarter'
+                      },
+                      sparklineData: [] as number[]
+                    }
+                    // Compute a simple sparkline and trend from vegetation mainPatch if present
+                    try {
+                      const firstBatch = batchData?.batch_results?.[0]
+                      const areaNames = firstBatch?.time_series ? Object.keys(firstBatch.time_series) : []
+                      const companyArea = areaNames?.[0]
+                      const ts = companyArea ? firstBatch.time_series[companyArea] : []
+                      if (Array.isArray(ts) && ts.length > 1) {
+                        const values: number[] = ts.map((p: any) => p?.vegetation?.ndvi_mean || 0)
+                        metricsSummary.sparklineData = values
+                        const latest = values[values.length - 1]
+                        const prev = values[values.length - 2]
+                        const diff = latest - prev
+                        metricsSummary.trend = {
+                          direction: Math.abs(diff) < 1e-6 ? 'stable' : (diff > 0 ? 'up' : 'down'),
+                          value: Math.round(Math.abs((diff / (Math.abs(prev) || 1)) * 100)),
+                          period: 'last quarter'
+                        }
+                      }
+                    } catch (e) {
+                      // best-effort summary
+                    }
+
+                    const payload: Omit<AnalysisResult,'companyId'|'quarter'|'timestamp'> = {
+                      metrics: metricsSummary,
+                      environmentalData: {
+                        redAreas: analysisData.redAreas,
+                        greenAreas: analysisData.greenAreas,
+                        batchAnalysisData: batchData
+                      }
+                    }
+                    void saveResult(payload).then(saved => {
+                      setStoredResult(saved)
+                      setStoredStatus('analyzed')
+                    })
+                  } catch (e) {
+                    // non-fatal
+                  }
                 }}
               />
             </TabsContent>
@@ -241,7 +321,7 @@ export default function CompanyPage() {
               
               {/* Real Data Visualization Component */}
               <RealDataVisualization
-                batchAnalysisData={batchAnalysisData}
+                batchAnalysisData={batchAnalysisData || storedResult?.environmentalData?.batchAnalysisData}
                 companyName={company.name}
                 className="max-w-6xl mx-auto"
               />

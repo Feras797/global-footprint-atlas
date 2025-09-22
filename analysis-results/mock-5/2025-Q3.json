@@ -1,0 +1,1366 @@
+{
+  "companyId": "mock-5",
+  "quarter": "2025-Q3",
+  "timestamp": "2025-09-22T21:32:18.483Z",
+  "metrics": {
+    "trend": {
+      "direction": "down",
+      "value": 5,
+      "period": "last quarter"
+    },
+    "sparklineData": [
+      0.5347833224454812,
+      0.6359724813483744,
+      0.6029608700026455,
+      0.6776673007268514,
+      0.5963777087647631,
+      0.6926662066236859,
+      0.6965835534833951,
+      0.6651191576685996
+    ]
+  },
+  "environmentalData": {
+    "redAreas": [
+      {
+        "name": "Tihange Nuclear Power Plant",
+        "coordinates": [
+          5.1069,
+          50.526,
+          5.3269,
+          50.306
+        ],
+        "location": "Huy, Liège, Belgium",
+        "environmentalData": null
+      }
+    ],
+    "greenAreas": [
+      {
+        "name": "Area G2x1",
+        "coordinates": [
+          3.7555486486486496,
+          48.05374774774775,
+          3.9755486486486493,
+          48.27374774774775
+        ],
+        "location": "Environmentally Similar Region",
+        "similarity": 0.8953945346118731,
+        "rank": 1,
+        "environmentalData": {
+          "ndvi_mean": 0.6183471995712163,
+          "ndvi_std": 0.2188311854262691,
+          "elevation_mean": 207.1923824578914,
+          "elevation_std": 48.33160303305627,
+          "slope_mean": 4.378257185740026,
+          "slope_std": 3.374887109871163,
+          "ndwi_mean": -0.6300275925968125,
+          "ndbi_mean": -0.21370980596442993,
+          "landcover_diversity": 6
+        }
+      },
+      {
+        "name": "Area G2x2",
+        "coordinates": [
+          3.7555486486486496,
+          48.95464864864864,
+          3.9755486486486493,
+          49.17464864864864
+        ],
+        "location": "Environmentally Similar Region",
+        "similarity": 0.8268153064064768,
+        "rank": 2,
+        "environmentalData": {
+          "ndvi_mean": 0.6451769761971885,
+          "ndvi_std": 0.18813863635795447,
+          "elevation_mean": 194.86446624639882,
+          "elevation_std": 60.283725009022625,
+          "slope_mean": 4.236502969823255,
+          "slope_std": 3.5285001054390386,
+          "ndwi_mean": -0.6269920184519452,
+          "ndbi_mean": -0.19472463894460793,
+          "landcover_diversity": 8
+        }
+      },
+      {
+        "name": "Area G2x3",
+        "coordinates": [
+          3.7555486486486496,
+          49.85554954954955,
+          3.9755486486486493,
+          50.07554954954955
+        ],
+        "location": "Environmentally Similar Region",
+        "similarity": 0.7877060381003731,
+        "rank": 3,
+        "environmentalData": {
+          "ndvi_mean": 0.6958406065928978,
+          "ndvi_std": 0.16123896442352215,
+          "elevation_mean": 189.46145157078976,
+          "elevation_std": 27.544813837983266,
+          "slope_mean": 2.5186480923690313,
+          "slope_std": 1.89862514059663,
+          "ndwi_mean": -0.6672448192361687,
+          "ndbi_mean": -0.23732503444777375,
+          "landcover_diversity": 7
+        }
+      }
+    ],
+    "batchAnalysisData": {
+      "status": "success",
+      "timestamp": "2025-09-22T21:32:18.456Z",
+      "total_requests": 1,
+      "batch_results": [
+        {
+          "status": "success",
+          "timestamp": "2025-09-22T21:32:18.433Z",
+          "request_id": "industrial_1758576738433_rop967",
+          "config": {
+            "start_date": "2022-01-01",
+            "end_date": "2023-12-31",
+            "temporal_resolution": "quarterly",
+            "thresholds": {
+              "vegetation_loss": -0.2,
+              "dust_level": 0.15,
+              "thermal_anomaly": 50,
+              "soil_exposure": 0.3,
+              "night_light_increase": 0.5
+            }
+          },
+          "rectangles": [
+            {
+              "name": "Tihange Nuclear Power Plant",
+              "bbox": [
+                5.1069,
+                50.306,
+                5.3269,
+                50.526
+              ]
+            },
+            {
+              "name": "Similar_Area_1",
+              "bbox": [
+                3.7555486486486496,
+                48.05374774774775,
+                3.9755486486486493,
+                48.27374774774775
+              ]
+            },
+            {
+              "name": "Similar_Area_2",
+              "bbox": [
+                3.7555486486486496,
+                48.95464864864864,
+                3.9755486486486493,
+                49.17464864864864
+              ]
+            },
+            {
+              "name": "Similar_Area_3",
+              "bbox": [
+                3.7555486486486496,
+                49.85554954954955,
+                3.9755486486486493,
+                50.07554954954955
+              ]
+            }
+          ],
+          "time_series": {
+            "Tihange Nuclear Power Plant": [
+              {
+                "period": "2022-Q1",
+                "vegetation": {
+                  "ndvi_mean": 0.5347833224454812,
+                  "ndvi_std": 0.1920556448662312
+                },
+                "thermal": {
+                  "temp_mean": 6.273918522434622,
+                  "temp_max": 14.460965060000035
+                },
+                "dust": {
+                  "dust_mean": 0.18706915149833306,
+                  "dust_max": 0.541836536594836
+                },
+                "soil": {
+                  "bsi_mean": -0.030932634649879356
+                },
+                "industrial": {
+                  "night_lights": 1.6180285301783806,
+                  "ndbi_mean": -0.08231658823204589,
+                  "overall_score": 0.4777878438023443
+                },
+                "anomalies": {
+                  "vegetation_loss": 0,
+                  "dust_anomaly": 1,
+                  "thermal_anomaly": 0,
+                  "soil_exposure": 0
+                }
+              },
+              {
+                "period": "2022-Q2",
+                "vegetation": {
+                  "ndvi_mean": 0.6359724813483744,
+                  "ndvi_std": 0.20546333154039934
+                },
+                "thermal": {
+                  "temp_mean": 12.85872700334947,
+                  "temp_max": 29.418220580000025
+                },
+                "dust": {
+                  "dust_mean": 0.1343251361831865,
+                  "dust_max": 0.6350860188999273
+                },
+                "soil": {
+                  "bsi_mean": -0.18988588663984202
+                },
+                "industrial": {
+                  "night_lights": 1.845927449519553,
+                  "ndbi_mean": -0.25232061474305123,
+                  "overall_score": 0.45708018831038
+                },
+                "anomalies": {
+                  "vegetation_loss": 0,
+                  "dust_anomaly": 1,
+                  "thermal_anomaly": 0,
+                  "soil_exposure": 0
+                }
+              },
+              {
+                "period": "2022-Q3",
+                "vegetation": {
+                  "ndvi_mean": 0.6029608700026455,
+                  "ndvi_std": 0.25102117037614063
+                },
+                "thermal": {
+                  "temp_mean": 14.530416100636623,
+                  "temp_max": 35.51767727000001
+                },
+                "dust": {
+                  "dust_mean": 0.1490474435346947,
+                  "dust_max": 0.5525751072961373
+                },
+                "soil": {
+                  "bsi_mean": -0.09800657855158443
+                },
+                "industrial": {
+                  "night_lights": 1.5525814047018203,
+                  "ndbi_mean": -0.14563970170932206,
+                  "overall_score": 0.4973718706496542
+                },
+                "anomalies": {
+                  "vegetation_loss": 0,
+                  "dust_anomaly": 1,
+                  "thermal_anomaly": 0,
+                  "soil_exposure": 0
+                }
+              },
+              {
+                "period": "2022-Q4",
+                "vegetation": {
+                  "ndvi_mean": 0.6776673007268514,
+                  "ndvi_std": 0.23177683467263538
+                },
+                "thermal": {
+                  "temp_mean": 3.935596915539022,
+                  "temp_max": 10.157677880000051
+                },
+                "dust": {
+                  "dust_mean": 0.17010671059237953,
+                  "dust_max": 1
+                },
+                "soil": {
+                  "bsi_mean": -0.17442034140344198
+                },
+                "industrial": {
+                  "night_lights": 1.2010954480006453,
+                  "ndbi_mean": -0.22621198964889092,
+                  "overall_score": 0.4270853692469334
+                },
+                "anomalies": {
+                  "vegetation_loss": 0,
+                  "dust_anomaly": 1,
+                  "thermal_anomaly": 0,
+                  "soil_exposure": 0
+                }
+              },
+              {
+                "period": "2023-Q1",
+                "vegetation": {
+                  "ndvi_mean": 0.5963777087647631,
+                  "ndvi_std": 0.16655958707129986
+                },
+                "thermal": {
+                  "temp_mean": 2.928177516886607,
+                  "temp_max": 11.876941940000052
+                },
+                "dust": {
+                  "dust_mean": 0.12405987946760846,
+                  "dust_max": 0.8343859649122807
+                },
+                "soil": {
+                  "bsi_mean": -0.10268148073499118
+                },
+                "industrial": {
+                  "night_lights": 1.194699373589238,
+                  "ndbi_mean": -0.15105962891188293,
+                  "overall_score": 0.4524173594822213
+                },
+                "anomalies": {
+                  "vegetation_loss": 0,
+                  "dust_anomaly": 1,
+                  "thermal_anomaly": 0,
+                  "soil_exposure": 0
+                }
+              },
+              {
+                "period": "2023-Q2",
+                "vegetation": {
+                  "ndvi_mean": 0.6926662066236859,
+                  "ndvi_std": 0.22296267342027176
+                },
+                "thermal": {
+                  "temp_mean": 19.42460353304928,
+                  "temp_max": 34.917814760000056
+                },
+                "dust": {
+                  "dust_mean": 0.10252785916691289,
+                  "dust_max": 0.5812906453226613
+                },
+                "soil": {
+                  "bsi_mean": -0.23570406916663508
+                },
+                "industrial": {
+                  "night_lights": 1.5975833921776124,
+                  "ndbi_mean": -0.2910208471260018,
+                  "overall_score": 0.4598850040932415
+                },
+                "anomalies": {
+                  "vegetation_loss": 0,
+                  "dust_anomaly": 1,
+                  "thermal_anomaly": 0,
+                  "soil_exposure": 0
+                }
+              },
+              {
+                "period": "2023-Q3",
+                "vegetation": {
+                  "ndvi_mean": 0.6965835534833951,
+                  "ndvi_std": 0.242659413435544
+                },
+                "thermal": {
+                  "temp_mean": 15.429090436579099,
+                  "temp_max": 27.21359768000002
+                },
+                "dust": {
+                  "dust_mean": 0.10614038883275331,
+                  "dust_max": 0.6111111111111112
+                },
+                "soil": {
+                  "bsi_mean": -0.17827550803340025
+                },
+                "industrial": {
+                  "night_lights": 1.2403752525179672,
+                  "ndbi_mean": -0.2185240965279612,
+                  "overall_score": 0.43264456461959766
+                },
+                "anomalies": {
+                  "vegetation_loss": 0,
+                  "dust_anomaly": 1,
+                  "thermal_anomaly": 0,
+                  "soil_exposure": 0
+                }
+              },
+              {
+                "period": "2023-Q4",
+                "vegetation": {
+                  "ndvi_mean": 0.6651191576685996,
+                  "ndvi_std": 0.22780628146295748
+                },
+                "thermal": {
+                  "temp_mean": 2.193070490237546,
+                  "temp_max": 13.066412900000046
+                },
+                "dust": {
+                  "dust_mean": 0.20478384666939747,
+                  "dust_max": 0.8723404255319149
+                },
+                "soil": {
+                  "bsi_mean": -0.14988454559087708
+                },
+                "industrial": {
+                  "night_lights": 1.1146564376272672,
+                  "ndbi_mean": -0.20451603848703656,
+                  "overall_score": 0.43165558999888515
+                },
+                "anomalies": {
+                  "vegetation_loss": 0,
+                  "dust_anomaly": 1,
+                  "thermal_anomaly": 0,
+                  "soil_exposure": 0
+                }
+              }
+            ],
+            "Similar_Area_1": [
+              {
+                "period": "2022-Q1",
+                "vegetation": {
+                  "ndvi_mean": 0.5077869785200443,
+                  "ndvi_std": 0.16224485814656645
+                },
+                "thermal": {
+                  "temp_mean": 7.147876021387575,
+                  "temp_max": 18.584806190000023
+                },
+                "dust": {
+                  "dust_mean": 0.221373655833187,
+                  "dust_max": 0.5152696556205328
+                },
+                "soil": {
+                  "bsi_mean": -0.011845654362055374
+                },
+                "industrial": {
+                  "night_lights": 0.5368214504999086,
+                  "ndbi_mean": -0.06979972900818503,
+                  "overall_score": 0.4744324082734268
+                },
+                "anomalies": {
+                  "vegetation_loss": 0,
+                  "dust_anomaly": 1,
+                  "thermal_anomaly": 0,
+                  "soil_exposure": 0
+                }
+              },
+              {
+                "period": "2022-Q2",
+                "vegetation": {
+                  "ndvi_mean": 0.7163960224171156,
+                  "ndvi_std": 0.19417754094002365
+                },
+                "thermal": {
+                  "temp_mean": 17.761568910183865,
+                  "temp_max": 33.184878620000006
+                },
+                "dust": {
+                  "dust_mean": 0.14861964944733908,
+                  "dust_max": 0.5089966453186947
+                },
+                "soil": {
+                  "bsi_mean": -0.25133949376349113
+                },
+                "industrial": {
+                  "night_lights": 0.8541282132936098,
+                  "ndbi_mean": -0.31784716103388866,
+                  "overall_score": 0.4382587720455567
+                },
+                "anomalies": {
+                  "vegetation_loss": 0,
+                  "dust_anomaly": 1,
+                  "thermal_anomaly": 0,
+                  "soil_exposure": 0
+                }
+              },
+              {
+                "period": "2022-Q3",
+                "vegetation": {
+                  "ndvi_mean": 0.5621310743155022,
+                  "ndvi_std": 0.31921598539359985
+                },
+                "thermal": {
+                  "temp_mean": 11.101132321261948,
+                  "temp_max": 36.36363721999999
+                },
+                "dust": {
+                  "dust_mean": 0.14910662900579852,
+                  "dust_max": 0.4681350424264308
+                },
+                "soil": {
+                  "bsi_mean": -0.09536837738828795
+                },
+                "industrial": {
+                  "night_lights": 0.637853296037976,
+                  "ndbi_mean": -0.14042558672130953,
+                  "overall_score": 0.4843004805503076
+                },
+                "anomalies": {
+                  "vegetation_loss": 0,
+                  "dust_anomaly": 1,
+                  "thermal_anomaly": 0,
+                  "soil_exposure": 0
+                }
+              },
+              {
+                "period": "2022-Q4",
+                "vegetation": {
+                  "ndvi_mean": 0.5890393832491008,
+                  "ndvi_std": 0.24394689126239927
+                },
+                "thermal": {
+                  "temp_mean": 8.048128870165906,
+                  "temp_max": 13.168953500000043
+                },
+                "dust": {
+                  "dust_mean": 0.15081035949502847,
+                  "dust_max": 0.5349397590361445
+                },
+                "soil": {
+                  "bsi_mean": -0.1632056032082349
+                },
+                "industrial": {
+                  "night_lights": 0.5296240923150742,
+                  "ndbi_mean": -0.23099336144581828,
+                  "overall_score": 0.438698275960422
+                },
+                "anomalies": {
+                  "vegetation_loss": 0,
+                  "dust_anomaly": 1,
+                  "thermal_anomaly": 0,
+                  "soil_exposure": 0
+                }
+              },
+              {
+                "period": "2023-Q1",
+                "vegetation": {
+                  "ndvi_mean": 0.577102545013638,
+                  "ndvi_std": 0.16806305576012684
+                },
+                "thermal": {
+                  "temp_mean": 6.151061834124262,
+                  "temp_max": 15.404338580000058
+                },
+                "dust": {
+                  "dust_mean": 0.22239839981775641,
+                  "dust_max": 0.5662202380952381
+                },
+                "soil": {
+                  "bsi_mean": -0.051431219918577624
+                },
+                "industrial": {
+                  "night_lights": 0.49895182773094415,
+                  "ndbi_mean": -0.11033033192537857,
+                  "overall_score": 0.4551951511844196
+                },
+                "anomalies": {
+                  "vegetation_loss": 0,
+                  "dust_anomaly": 1,
+                  "thermal_anomaly": 0,
+                  "soil_exposure": 0
+                }
+              },
+              {
+                "period": "2023-Q2",
+                "vegetation": {
+                  "ndvi_mean": 0.7738860974050374,
+                  "ndvi_std": 0.181309146929703
+                },
+                "thermal": {
+                  "temp_mean": 13.209018541200248,
+                  "temp_max": 30.783719570000045
+                },
+                "dust": {
+                  "dust_mean": 0.08621937566152656,
+                  "dust_max": 0.4936619718309859
+                },
+                "soil": {
+                  "bsi_mean": -0.32430489992130906
+                },
+                "industrial": {
+                  "night_lights": 0.7542008660710182,
+                  "ndbi_mean": -0.38232812926564114,
+                  "overall_score": 0.4042913794178156
+                },
+                "anomalies": {
+                  "vegetation_loss": 0,
+                  "dust_anomaly": 1,
+                  "thermal_anomaly": 0,
+                  "soil_exposure": 0
+                }
+              },
+              {
+                "period": "2023-Q3",
+                "vegetation": {
+                  "ndvi_mean": 0.5985022363719296,
+                  "ndvi_std": 0.2859181005490351
+                },
+                "thermal": {
+                  "temp_mean": 16.51440963757945,
+                  "temp_max": 36.312366920000045
+                },
+                "dust": {
+                  "dust_mean": 0.1443826719298068,
+                  "dust_max": 0.47077082255561303
+                },
+                "soil": {
+                  "bsi_mean": -0.09543014964984242
+                },
+                "industrial": {
+                  "night_lights": 0.530825293615234,
+                  "ndbi_mean": -0.1380690508873992,
+                  "overall_score": 0.47718197085146496
+                },
+                "anomalies": {
+                  "vegetation_loss": 0,
+                  "dust_anomaly": 1,
+                  "thermal_anomaly": 0,
+                  "soil_exposure": 0
+                }
+              },
+              {
+                "period": "2023-Q4",
+                "vegetation": {
+                  "ndvi_mean": 0.5872473676690875,
+                  "ndvi_std": 0.2580015333951735
+                },
+                "thermal": {
+                  "temp_mean": -6.2370141137638635,
+                  "temp_max": 11.008764860000042
+                },
+                "dust": {
+                  "dust_mean": 0.21141690079900452,
+                  "dust_max": 0.5365617433414044
+                },
+                "soil": {
+                  "bsi_mean": -0.10687183113301359
+                },
+                "industrial": {
+                  "night_lights": 0.45769382559623756,
+                  "ndbi_mean": -0.16508892000180853,
+                  "overall_score": 0.44585763138707846
+                },
+                "anomalies": {
+                  "vegetation_loss": 0,
+                  "dust_anomaly": 1,
+                  "thermal_anomaly": 0,
+                  "soil_exposure": 0
+                }
+              }
+            ],
+            "Similar_Area_2": [
+              {
+                "period": "2022-Q1",
+                "vegetation": {
+                  "ndvi_mean": 0.48271208730865856,
+                  "ndvi_std": 0.14619581796332437
+                },
+                "thermal": {
+                  "temp_mean": 6.356310315283468,
+                  "temp_max": 13.828631360000003
+                },
+                "dust": {
+                  "dust_mean": 0.18750586635618124,
+                  "dust_max": 0.5176733780760626
+                },
+                "soil": {
+                  "bsi_mean": 0.023456264395958906
+                },
+                "industrial": {
+                  "night_lights": 2.0377569429432216,
+                  "ndbi_mean": -0.02107524821385617,
+                  "overall_score": 0.49954060938670464
+                },
+                "anomalies": {
+                  "vegetation_loss": 0,
+                  "dust_anomaly": 1,
+                  "thermal_anomaly": 0,
+                  "soil_exposure": 0
+                }
+              },
+              {
+                "period": "2022-Q2",
+                "vegetation": {
+                  "ndvi_mean": 0.6498303405407593,
+                  "ndvi_std": 0.21051118486279302
+                },
+                "thermal": {
+                  "temp_mean": 14.034968945037498,
+                  "temp_max": 30.183857060000037
+                },
+                "dust": {
+                  "dust_mean": 0.12663848033969563,
+                  "dust_max": 0.503308680420397
+                },
+                "soil": {
+                  "bsi_mean": -0.1860278566325096
+                },
+                "industrial": {
+                  "night_lights": 2.4521118794505328,
+                  "ndbi_mean": -0.2416211795331897,
+                  "overall_score": 0.4642573307022559
+                },
+                "anomalies": {
+                  "vegetation_loss": 0,
+                  "dust_anomaly": 1,
+                  "thermal_anomaly": 0,
+                  "soil_exposure": 0
+                }
+              },
+              {
+                "period": "2022-Q3",
+                "vegetation": {
+                  "ndvi_mean": 0.6171571548730933,
+                  "ndvi_std": 0.27266553554393475
+                },
+                "thermal": {
+                  "temp_mean": 17.349069719965687,
+                  "temp_max": 35.57065657999999
+                },
+                "dust": {
+                  "dust_mean": 0.12407155397967679,
+                  "dust_max": 0.5349730976172176
+                },
+                "soil": {
+                  "bsi_mean": -0.12204863189582439
+                },
+                "industrial": {
+                  "night_lights": 2.0257933287301317,
+                  "ndbi_mean": -0.16550955595931385,
+                  "overall_score": 0.4966800034425301
+                },
+                "anomalies": {
+                  "vegetation_loss": 0,
+                  "dust_anomaly": 1,
+                  "thermal_anomaly": 0,
+                  "soil_exposure": 0
+                }
+              },
+              {
+                "period": "2022-Q4",
+                "vegetation": {
+                  "ndvi_mean": 0.6488208078318112,
+                  "ndvi_std": 0.22991752232355042
+                },
+                "thermal": {
+                  "temp_mean": 5.7450439001803275,
+                  "temp_max": 11.371074980000031
+                },
+                "dust": {
+                  "dust_mean": 0.19113026457325624,
+                  "dust_max": 0.6250604741170779
+                },
+                "soil": {
+                  "bsi_mean": -0.14148168225386415
+                },
+                "industrial": {
+                  "night_lights": 1.4879643103277522,
+                  "ndbi_mean": -0.1934608267749071,
+                  "overall_score": 0.43983131402913017
+                },
+                "anomalies": {
+                  "vegetation_loss": 0,
+                  "dust_anomaly": 1,
+                  "thermal_anomaly": 0,
+                  "soil_exposure": 0
+                }
+              },
+              {
+                "period": "2023-Q1",
+                "vegetation": {
+                  "ndvi_mean": 0.5421003016233721,
+                  "ndvi_std": 0.15314763020207045
+                },
+                "thermal": {
+                  "temp_mean": 7.021978093526948,
+                  "temp_max": 15.096716780000008
+                },
+                "dust": {
+                  "dust_mean": 0.22685940859127177,
+                  "dust_max": 0.5725582389399444
+                },
+                "soil": {
+                  "bsi_mean": -0.007528315567960127
+                },
+                "industrial": {
+                  "night_lights": 1.4832767330110779,
+                  "ndbi_mean": -0.06065580915797238,
+                  "overall_score": 0.47781529287994073
+                },
+                "anomalies": {
+                  "vegetation_loss": 0,
+                  "dust_anomaly": 1,
+                  "thermal_anomaly": 0,
+                  "soil_exposure": 0
+                }
+              },
+              {
+                "period": "2023-Q2",
+                "vegetation": {
+                  "ndvi_mean": 0.7215249349361832,
+                  "ndvi_std": 0.19055821444727258
+                },
+                "thermal": {
+                  "temp_mean": 17.382073655458765,
+                  "temp_max": 35.196383389999994
+                },
+                "dust": {
+                  "dust_mean": 0.08044352376480314,
+                  "dust_max": 0.5076923076923077
+                },
+                "soil": {
+                  "bsi_mean": -0.24943637424817652
+                },
+                "industrial": {
+                  "night_lights": 1.7205068217884814,
+                  "ndbi_mean": -0.3026868687546592,
+                  "overall_score": 0.45484354328430193
+                },
+                "anomalies": {
+                  "vegetation_loss": 0,
+                  "dust_anomaly": 1,
+                  "thermal_anomaly": 0,
+                  "soil_exposure": 0
+                }
+              },
+              {
+                "period": "2023-Q3",
+                "vegetation": {
+                  "ndvi_mean": 0.6635772076291964,
+                  "ndvi_std": 0.24259656563925808
+                },
+                "thermal": {
+                  "temp_mean": 15.033410596826256,
+                  "temp_max": 35.970564920000015
+                },
+                "dust": {
+                  "dust_mean": 0.10000391503845801,
+                  "dust_max": 0.5258294834103318
+                },
+                "soil": {
+                  "bsi_mean": -0.12934734963743127
+                },
+                "industrial": {
+                  "night_lights": 1.3983674920659848,
+                  "ndbi_mean": -0.1680255722424694,
+                  "overall_score": 0.4820481632398898
+                },
+                "anomalies": {
+                  "vegetation_loss": 0,
+                  "dust_anomaly": 1,
+                  "thermal_anomaly": 0,
+                  "soil_exposure": 0
+                }
+              },
+              {
+                "period": "2023-Q4",
+                "vegetation": {
+                  "ndvi_mean": 0.623593098393912,
+                  "ndvi_std": 0.19552911682956883
+                },
+                "thermal": {
+                  "temp_mean": -46.002195356843174,
+                  "temp_max": 3.554063240000005
+                },
+                "dust": {
+                  "dust_mean": 0.15990925561718367,
+                  "dust_max": 0.8386751095957136
+                },
+                "soil": {
+                  "bsi_mean": -0.10875909271085274
+                },
+                "industrial": {
+                  "night_lights": 1.1231637605011706,
+                  "ndbi_mean": -0.16052897632440555,
+                  "overall_score": 0.4453296371566951
+                },
+                "anomalies": {
+                  "vegetation_loss": 0,
+                  "dust_anomaly": 1,
+                  "thermal_anomaly": 0,
+                  "soil_exposure": 0
+                }
+              }
+            ],
+            "Similar_Area_3": [
+              {
+                "period": "2022-Q1",
+                "vegetation": {
+                  "ndvi_mean": 0.645530117162838,
+                  "ndvi_std": 0.19725607161125994
+                },
+                "thermal": {
+                  "temp_mean": 4.182517900730169,
+                  "temp_max": 7.985526170000014
+                },
+                "dust": {
+                  "dust_mean": 0.19538872465802512,
+                  "dust_max": 0.7821782178217822
+                },
+                "soil": {
+                  "bsi_mean": -0.13507446210140134
+                },
+                "industrial": {
+                  "night_lights": 0.7568625598193592,
+                  "ndbi_mean": -0.19578856701981256,
+                  "overall_score": 0.4335425891570303
+                },
+                "anomalies": {
+                  "vegetation_loss": 0,
+                  "dust_anomaly": 1,
+                  "thermal_anomaly": 0,
+                  "soil_exposure": 0
+                }
+              },
+              {
+                "period": "2022-Q2",
+                "vegetation": {
+                  "ndvi_mean": 0.7201034594861794,
+                  "ndvi_std": 0.19955989389249396
+                },
+                "thermal": {
+                  "temp_mean": 8.517822392298823,
+                  "temp_max": 25.49433362000002
+                },
+                "dust": {
+                  "dust_mean": 0.12425429785391169,
+                  "dust_max": 0.5658783783783784
+                },
+                "soil": {
+                  "bsi_mean": -0.23036753532627188
+                },
+                "industrial": {
+                  "night_lights": 1.0507669977213712,
+                  "ndbi_mean": -0.2830552783628722,
+                  "overall_score": 0.412033983492364
+                },
+                "anomalies": {
+                  "vegetation_loss": 0,
+                  "dust_anomaly": 1,
+                  "thermal_anomaly": 0,
+                  "soil_exposure": 0
+                }
+              },
+              {
+                "period": "2022-Q3",
+                "vegetation": {
+                  "ndvi_mean": 0.6475560450844207,
+                  "ndvi_std": 0.21512354488424543
+                },
+                "thermal": {
+                  "temp_mean": 16.85873467570549,
+                  "temp_max": 30.787137589999986
+                },
+                "dust": {
+                  "dust_mean": 0.16169195460144845,
+                  "dust_max": 0.5186023940472339
+                },
+                "soil": {
+                  "bsi_mean": -0.09347528568712545
+                },
+                "industrial": {
+                  "night_lights": 0.7850948752245513,
+                  "ndbi_mean": -0.13604019989465543,
+                  "overall_score": 0.4626756336740942
+                },
+                "anomalies": {
+                  "vegetation_loss": 0,
+                  "dust_anomaly": 1,
+                  "thermal_anomaly": 0,
+                  "soil_exposure": 0
+                }
+              },
+              {
+                "period": "2022-Q4",
+                "vegetation": {
+                  "ndvi_mean": 0.7576147307756237,
+                  "ndvi_std": 0.18754574547786884
+                },
+                "thermal": {
+                  "temp_mean": 5.146054764155619,
+                  "temp_max": 13.750016899999991
+                },
+                "dust": {
+                  "dust_mean": 0.12926453017679812,
+                  "dust_max": 0.6144767899291896
+                },
+                "soil": {
+                  "bsi_mean": -0.2137999471848732
+                },
+                "industrial": {
+                  "night_lights": 0.6050595144542347,
+                  "ndbi_mean": -0.25595861282144816,
+                  "overall_score": 0.4006947223094798
+                },
+                "anomalies": {
+                  "vegetation_loss": 0,
+                  "dust_anomaly": 1,
+                  "thermal_anomaly": 0,
+                  "soil_exposure": 0
+                }
+              },
+              {
+                "period": "2023-Q1",
+                "vegetation": {
+                  "ndvi_mean": 0.6692459050117162,
+                  "ndvi_std": 0.17049025705680204
+                },
+                "thermal": {
+                  "temp_mean": 1.7149770767825723,
+                  "temp_max": 10.443082550000042
+                },
+                "dust": {
+                  "dust_mean": 0.15828980553117025,
+                  "dust_max": 0.5329545454545455
+                },
+                "soil": {
+                  "bsi_mean": -0.142583386638744
+                },
+                "industrial": {
+                  "night_lights": 0.5873186805283581,
+                  "ndbi_mean": -0.195673079512849,
+                  "overall_score": 0.4265465978293921
+                },
+                "anomalies": {
+                  "vegetation_loss": 0,
+                  "dust_anomaly": 1,
+                  "thermal_anomaly": 0,
+                  "soil_exposure": 0
+                }
+              },
+              {
+                "period": "2023-Q2",
+                "vegetation": {
+                  "ndvi_mean": 0.6901373229393594,
+                  "ndvi_std": 0.21629876292824987
+                },
+                "thermal": {
+                  "temp_mean": 14.535976016338283,
+                  "temp_max": 27.44260502000003
+                },
+                "dust": {
+                  "dust_mean": 0.14049153807198891,
+                  "dust_max": 0.4838207840696951
+                },
+                "soil": {
+                  "bsi_mean": -0.21200786455664464
+                },
+                "industrial": {
+                  "night_lights": 0.8310185141059948,
+                  "ndbi_mean": -0.26899185167533424,
+                  "overall_score": 0.4176133502425207
+                },
+                "anomalies": {
+                  "vegetation_loss": 0,
+                  "dust_anomaly": 1,
+                  "thermal_anomaly": 0,
+                  "soil_exposure": 0
+                }
+              },
+              {
+                "period": "2023-Q3",
+                "vegetation": {
+                  "ndvi_mean": 0.7592212410337021,
+                  "ndvi_std": 0.20899552121312548
+                },
+                "thermal": {
+                  "temp_mean": 3.3198437012846416,
+                  "temp_max": 22.41127958000004
+                },
+                "dust": {
+                  "dust_mean": 0.06520473618926391,
+                  "dust_max": 0.49059561128526646
+                },
+                "soil": {
+                  "bsi_mean": -0.22308274186293953
+                },
+                "industrial": {
+                  "night_lights": 0.660218589513967,
+                  "ndbi_mean": -0.2584493750537476,
+                  "overall_score": 0.3954020689386246
+                },
+                "anomalies": {
+                  "vegetation_loss": 0,
+                  "dust_anomaly": 1,
+                  "thermal_anomaly": 0,
+                  "soil_exposure": 0
+                }
+              },
+              {
+                "period": "2023-Q4",
+                "vegetation": {
+                  "ndvi_mean": 0.6951353030286213,
+                  "ndvi_std": 0.18832220608656405
+                },
+                "thermal": {
+                  "temp_mean": -0.3929525782667061,
+                  "temp_max": 7.913747750000027
+                },
+                "dust": {
+                  "dust_mean": 0.128928194598743,
+                  "dust_max": 0.4524858401510384
+                },
+                "soil": {
+                  "bsi_mean": -0.17187462207740087
+                },
+                "industrial": {
+                  "night_lights": 0.5282996310906106,
+                  "ndbi_mean": -0.22122601917453721,
+                  "overall_score": 0.39354695816616914
+                },
+                "anomalies": {
+                  "vegetation_loss": 0,
+                  "dust_anomaly": 1,
+                  "thermal_anomaly": 0,
+                  "soil_exposure": 0
+                }
+              }
+            ]
+          },
+          "area_comparisons": [
+            {
+              "area_1": "Tihange Nuclear Power Plant",
+              "area_2": "Similar_Area_1",
+              "industrial_similarity": 0.9857979586118066,
+              "score_difference": 0.01420204138819331,
+              "area_1_score": 0.43165558999888515,
+              "area_2_score": 0.44585763138707846,
+              "both_have_dust_anomaly": 1,
+              "both_have_thermal_anomaly": 0
+            },
+            {
+              "area_1": "Tihange Nuclear Power Plant",
+              "area_2": "Similar_Area_2",
+              "industrial_similarity": 0.98632595284219,
+              "score_difference": 0.013674047157809954,
+              "area_1_score": 0.43165558999888515,
+              "area_2_score": 0.4453296371566951,
+              "both_have_dust_anomaly": 1,
+              "both_have_thermal_anomaly": 0
+            },
+            {
+              "area_1": "Tihange Nuclear Power Plant",
+              "area_2": "Similar_Area_3",
+              "industrial_similarity": 0.961891368167284,
+              "score_difference": 0.03810863183271601,
+              "area_1_score": 0.43165558999888515,
+              "area_2_score": 0.39354695816616914,
+              "both_have_dust_anomaly": 1,
+              "both_have_thermal_anomaly": 0
+            },
+            {
+              "area_1": "Similar_Area_1",
+              "area_2": "Similar_Area_2",
+              "industrial_similarity": 0.9994720057696167,
+              "score_difference": 0.0005279942303833551,
+              "area_1_score": 0.44585763138707846,
+              "area_2_score": 0.4453296371566951,
+              "both_have_dust_anomaly": 1,
+              "both_have_thermal_anomaly": 0
+            },
+            {
+              "area_1": "Similar_Area_1",
+              "area_2": "Similar_Area_3",
+              "industrial_similarity": 0.9476893267790907,
+              "score_difference": 0.05231067322090932,
+              "area_1_score": 0.44585763138707846,
+              "area_2_score": 0.39354695816616914,
+              "both_have_dust_anomaly": 1,
+              "both_have_thermal_anomaly": 0
+            },
+            {
+              "area_1": "Similar_Area_2",
+              "area_2": "Similar_Area_3",
+              "industrial_similarity": 0.948217321009474,
+              "score_difference": 0.051782678990525965,
+              "area_1_score": 0.4453296371566951,
+              "area_2_score": 0.39354695816616914,
+              "both_have_dust_anomaly": 1,
+              "both_have_thermal_anomaly": 0
+            }
+          ],
+          "anomaly_summary": {
+            "total_anomalies": 32,
+            "by_type": {
+              "vegetation_loss": [],
+              "dust_anomalies": [
+                {
+                  "area": "Tihange Nuclear Power Plant",
+                  "period": "2022-Q1",
+                  "dust_max": 0.541836536594836
+                },
+                {
+                  "area": "Similar_Area_1",
+                  "period": "2022-Q1",
+                  "dust_max": 0.5152696556205328
+                },
+                {
+                  "area": "Similar_Area_2",
+                  "period": "2022-Q1",
+                  "dust_max": 0.5176733780760626
+                },
+                {
+                  "area": "Similar_Area_3",
+                  "period": "2022-Q1",
+                  "dust_max": 0.7821782178217822
+                },
+                {
+                  "area": "Tihange Nuclear Power Plant",
+                  "period": "2022-Q2",
+                  "dust_max": 0.6350860188999273
+                },
+                {
+                  "area": "Similar_Area_1",
+                  "period": "2022-Q2",
+                  "dust_max": 0.5089966453186947
+                },
+                {
+                  "area": "Similar_Area_2",
+                  "period": "2022-Q2",
+                  "dust_max": 0.503308680420397
+                },
+                {
+                  "area": "Similar_Area_3",
+                  "period": "2022-Q2",
+                  "dust_max": 0.5658783783783784
+                },
+                {
+                  "area": "Tihange Nuclear Power Plant",
+                  "period": "2022-Q3",
+                  "dust_max": 0.5525751072961373
+                },
+                {
+                  "area": "Similar_Area_1",
+                  "period": "2022-Q3",
+                  "dust_max": 0.4681350424264308
+                },
+                {
+                  "area": "Similar_Area_2",
+                  "period": "2022-Q3",
+                  "dust_max": 0.5349730976172176
+                },
+                {
+                  "area": "Similar_Area_3",
+                  "period": "2022-Q3",
+                  "dust_max": 0.5186023940472339
+                },
+                {
+                  "area": "Tihange Nuclear Power Plant",
+                  "period": "2022-Q4",
+                  "dust_max": 1
+                },
+                {
+                  "area": "Similar_Area_1",
+                  "period": "2022-Q4",
+                  "dust_max": 0.5349397590361445
+                },
+                {
+                  "area": "Similar_Area_2",
+                  "period": "2022-Q4",
+                  "dust_max": 0.6250604741170779
+                },
+                {
+                  "area": "Similar_Area_3",
+                  "period": "2022-Q4",
+                  "dust_max": 0.6144767899291896
+                },
+                {
+                  "area": "Tihange Nuclear Power Plant",
+                  "period": "2023-Q1",
+                  "dust_max": 0.8343859649122807
+                },
+                {
+                  "area": "Similar_Area_1",
+                  "period": "2023-Q1",
+                  "dust_max": 0.5662202380952381
+                },
+                {
+                  "area": "Similar_Area_2",
+                  "period": "2023-Q1",
+                  "dust_max": 0.5725582389399444
+                },
+                {
+                  "area": "Similar_Area_3",
+                  "period": "2023-Q1",
+                  "dust_max": 0.5329545454545455
+                },
+                {
+                  "area": "Tihange Nuclear Power Plant",
+                  "period": "2023-Q2",
+                  "dust_max": 0.5812906453226613
+                },
+                {
+                  "area": "Similar_Area_1",
+                  "period": "2023-Q2",
+                  "dust_max": 0.4936619718309859
+                },
+                {
+                  "area": "Similar_Area_2",
+                  "period": "2023-Q2",
+                  "dust_max": 0.5076923076923077
+                },
+                {
+                  "area": "Similar_Area_3",
+                  "period": "2023-Q2",
+                  "dust_max": 0.4838207840696951
+                },
+                {
+                  "area": "Tihange Nuclear Power Plant",
+                  "period": "2023-Q3",
+                  "dust_max": 0.6111111111111112
+                },
+                {
+                  "area": "Similar_Area_1",
+                  "period": "2023-Q3",
+                  "dust_max": 0.47077082255561303
+                },
+                {
+                  "area": "Similar_Area_2",
+                  "period": "2023-Q3",
+                  "dust_max": 0.5258294834103318
+                },
+                {
+                  "area": "Similar_Area_3",
+                  "period": "2023-Q3",
+                  "dust_max": 0.49059561128526646
+                },
+                {
+                  "area": "Tihange Nuclear Power Plant",
+                  "period": "2023-Q4",
+                  "dust_max": 0.8723404255319149
+                },
+                {
+                  "area": "Similar_Area_1",
+                  "period": "2023-Q4",
+                  "dust_max": 0.5365617433414044
+                },
+                {
+                  "area": "Similar_Area_2",
+                  "period": "2023-Q4",
+                  "dust_max": 0.8386751095957136
+                },
+                {
+                  "area": "Similar_Area_3",
+                  "period": "2023-Q4",
+                  "dust_max": 0.4524858401510384
+                }
+              ],
+              "thermal_anomalies": [],
+              "soil_exposure": []
+            },
+            "thresholds_used": {
+              "vegetation_loss": -0.2,
+              "dust_level": 0.15,
+              "thermal_anomaly": 50,
+              "soil_exposure": 0.3,
+              "night_light_increase": 0.5
+            }
+          },
+          "summary": {
+            "total_periods_analyzed": 8,
+            "temporal_resolution": "quarterly",
+            "areas_analyzed": 4,
+            "total_features_processed": 32,
+            "thresholds_used": {
+              "vegetation_loss": -0.2,
+              "dust_level": 0.15,
+              "thermal_anomaly": 50,
+              "soil_exposure": 0.3,
+              "night_light_increase": 0.5
+            }
+          }
+        }
+      ],
+      "combined_summary": {
+        "total_areas_analyzed": 4,
+        "total_periods": 8,
+        "total_anomalies": 32,
+        "total_requests": 1
+      }
+    }
+  }
+}

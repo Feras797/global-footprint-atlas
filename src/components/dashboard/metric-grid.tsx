@@ -23,14 +23,11 @@ export const MetricGrid = ({
   loading = false,
   className 
 }: MetricGridProps) => {
-  // Calculate metrics from company data
+  // Basic counts; avoid fabricated trends
   const activeCompanies = companies.length
   const avgImpactScore = companies.length > 0 
     ? Math.round(companies.reduce((sum, company) => sum + company.impactScore, 0) / companies.length)
     : 0
-  
-  // Mock trend calculation (in real app this would come from historical data)
-  const impactReduction = -12 // Negative indicates improvement
   
   // Count unique countries
   const uniqueCountries = new Set(companies.map(company => company.country)).size
@@ -39,44 +36,28 @@ export const MetricGrid = ({
     {
       title: 'Active Companies',
       value: activeCompanies,
-      trend: {
-        value: 8.2,
-        direction: 'up' as const,
-        period: 'this month'
-      },
+      trend: undefined,
       icon: Globe,
       variant: 'default' as const
     },
     {
       title: 'Avg Impact Score',
       value: `${avgImpactScore}%`,
-      trend: {
-        value: 3.1,
-        direction: 'up' as const,
-        period: 'vs last month'
-      },
+      trend: undefined,
       icon: TrendingUp,
       variant: avgImpactScore > 70 ? 'danger' as const : avgImpactScore > 50 ? 'warning' as const : 'success' as const
     },
     {
       title: 'Impact Reduction',
-      value: `${impactReduction}%`,
-      trend: {
-        value: Math.abs(impactReduction),
-        direction: impactReduction < 0 ? 'down' as const : 'up' as const,
-        period: 'this quarter'
-      },
-      icon: impactReduction < 0 ? TrendingDown : TrendingUp,
-      variant: 'success' as const
+      value: '—',
+      trend: undefined,
+      icon: TrendingDown,
+      variant: 'default' as const
     },
     {
       title: 'Countries',
       value: uniqueCountries,
-      trend: {
-        value: 15,
-        direction: 'up' as const,
-        period: 'global reach'
-      },
+      trend: undefined,
       icon: Leaf,
       variant: 'default' as const
     }

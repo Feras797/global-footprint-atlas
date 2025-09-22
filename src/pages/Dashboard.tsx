@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { MetricGrid } from "@/components/dashboard";
 import { CompanyData, GlobeEntity } from "@/types/globe";
 import mockDataJson from "@/data/mockdata.json";
+import { useNavigate } from "react-router-dom";
 
 // Removed old GEE Analysis imports - using simplified approach now
 
@@ -37,6 +38,7 @@ const Dashboard = () => {
     impactRange: [0, 100] as [number, number],
     timeRange: '2024'
   });
+  const navigate = useNavigate();
 
   // Removed GEE Analysis state - using simplified approach
 
@@ -116,6 +118,7 @@ const Dashboard = () => {
                 <CompanyList 
                   companies={companyLocations}
                   onCompanySelect={setSelectedCompany}
+                  onStartAnalysis={(companyId) => navigate(`/company/${companyId}`)}
                 />
               </Card>
             </div>
@@ -133,6 +136,7 @@ const Dashboard = () => {
               companies={companyLocations}
               onCompanySelect={setSelectedCompany}
               showAll={true}
+              onStartAnalysis={(companyId) => navigate(`/company/${companyId}`)}
             />
           </div>
         );
